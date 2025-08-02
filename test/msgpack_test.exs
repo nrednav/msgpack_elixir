@@ -299,4 +299,45 @@ defmodule MsgpackTest do
       assert metadata.input_byte_size == byte_size(input)
     end
   end
+
+  describe "Edge Case Data Types" do
+    test "provides a lossless round trip for Infinity" do
+      input = 1.0 / 0.0
+
+      assert Float.is_infinite(input)
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert result == input
+    end
+
+    test "provides a lossless round trip for negative Infinity" do
+      input = -1.0 / 0.0
+
+      assert Float.is_infinite(input)
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert result == input
+    end
+
+    test "provides a lossless round trip for NaN" do
+      input = 0.0 / 0.0
+
+      assert Float.is_nan(input)
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert Float.is_nan(result)
+    end
+  end
 end
