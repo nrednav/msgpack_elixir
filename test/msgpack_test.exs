@@ -62,7 +62,7 @@ defmodule MsgpackTest do
       input = [:foo]
       expected_binary = <<0x91, 0xa3, "foo">>
 
-      result_with_option = Msgpack.encode(input, atoms: :error)
+      result_with_option = Msgpack.encode(input, atoms: :string)
       result_with_default = Msgpack.encode(input)
 
       assert result_with_option == {:ok, expected_binary}
