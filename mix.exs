@@ -10,7 +10,7 @@ defmodule MsgpackElixir.MixProject do
       version: @version,
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
       aliases: aliases(),
       description: "An implementation of MessagePack for Elixir.",
       package: package(),
@@ -41,11 +41,13 @@ defmodule MsgpackElixir.MixProject do
   end
 
   defp package do
-    maintainers: ["Vandern Rodrigues"]
-    licenses: ["MIT"],
-    links: %{
-      "GitHub" => @source_url,
-      "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"
-    }
+    [
+      maintainers: ["Vandern Rodrigues"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"
+      }
+    ]
   end
 end
