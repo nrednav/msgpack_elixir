@@ -118,6 +118,31 @@ defmodule MsgpackTest do
         Msgpack.decode(input, max_depth: 2)
       )
     end
+
+    test "returns an error when a declared string size exceeds :max_byte_size" do
+      input = <<0xdb, 0xFFFFFFFF::32>>
+      limit = 1_000_000 # 1MB limit
+
+      result = Msgpack.decode(input, max_byte_size: limit)
+
+      assert result == {:error, {:max_byte_size_exceeded, limit}}
+    end
+
+    test "returns an error when a declared array size exceeds :max_byte_size" do
+      input = <<0xdd, 0xFFFFFFFF::32>>
+      limit = 1_000_000 # 1MB limit
+
+      result = Msgpack.decode(input, max_byte_size: limit)
+
+      assert result == {:error, {:max_byte_size_exceeded, limit}}
+    end
+
+    test "successfully decodes data within byte size limit" do
+      input = <<0xa5, "hello">>
+      limit = 10
+
+      assert Msgpack.decode(input, max_byte_size: limit) == {:ok, "hello"}
+    end
   end
 
   describe "encode!/1" do
