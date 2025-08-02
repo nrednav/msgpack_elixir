@@ -1,19 +1,14 @@
 defmodule MsgpackTest do
   use ExUnit.Case, async: true
-
   use ExUnitProperties
 
   require StreamData
 
-  defmodule Msgpack.EncodeError, do: defexception [:message]
-  defmodule Msgpack.DecodeError, do: defexception [:message]
-  defmodule Msgpack.Ext do
-    defstruct [:type, :data]
-  end
-
+  alias Msgpack
   alias Msgpack.Ext
 
   describe "encode/1" do
+    @tag :wip
     test "successfully encodes a map with lists and atoms" do
       input = %{"tags" => [:a]}
       expected_binary = <<0x81, 0xa4, "tags", 0x91, 0xa1, "a">>
@@ -305,7 +300,11 @@ defmodule MsgpackTest do
 
       input = <<0xc1>>
 
-      try, do: Msgpack.decode!(input), rescue: _ -> :ok
+      try do
+        Msgpack.decode!(input)
+      rescue
+        _ -> :ok
+      end
 
       assert_receive {:telemetry_event, measurements, metadata}
       assert is_integer(measurements.duration)
