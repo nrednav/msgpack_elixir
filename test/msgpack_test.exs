@@ -7,6 +7,11 @@ defmodule MsgpackTest do
 
   defmodule Msgpack.EncodeError, do: defexception [:message]
   defmodule Msgpack.DecodeError, do: defexception [:message]
+  defmodule Msgpack.Ext do
+    defstruct [:type, :data]
+  end
+
+  alias Msgpack.Ext
 
   describe "encode/1" do
     test "successfully encodes a map with lists and atoms" do
@@ -184,6 +189,39 @@ defmodule MsgpackTest do
           assert result == term
         end
       end
+    end
+  end
+
+  describe "Msgpack.Ext and Timestamps" do
+    test "provides a lossless round trip for custom extension types" do
+      input = %Ext{type: 10, data: <<1, 2, 3, 4>>}
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert result == input
+    end
+
+    test "provides a lossless round trip for NaiveDateTime via the Timestamp extension" do
+      input = ~N[2025-08-02 10:00:00.123456]
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert result == input
+    end
+
+    test "decodes a timestamp with nanoseconds into a NaiveDateTime" do
+      input = <<0xd7, -1::signed, 0x000001F4653B8A10::64>>
+      expected_datetime = ~N[2023-10-27 10:00:00.000000500]
+
+      {:ok, result} = Msgpack.decode(input)
+
+      assert result == expected_datetime
     end
   end
 end
