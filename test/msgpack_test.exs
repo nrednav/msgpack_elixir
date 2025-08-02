@@ -104,6 +104,15 @@ defmodule MsgpackTest do
 
       assert match?({:error, {:malformed_binary, _reason}}, result)
     end
+
+    test "successfully decodes a float 32 binary" do
+      input = <<0xca, 0x3FC00000::32>>
+      expected_term = 1.5
+
+      result = Msgpack.decode(input)
+
+      assert result == {:ok, expected_term}
+    end
   end
 
   describe "decode/2" do
@@ -243,6 +252,15 @@ defmodule MsgpackTest do
     test "decodes a timestamp with nanoseconds into a NaiveDateTime" do
       input = <<0xd7, -1::signed, 0x000001F4653B8A10::64>>
       expected_datetime = ~N[2023-10-27 10:00:00.000000500]
+
+      {:ok, result} = Msgpack.decode(input)
+
+      assert result == expected_datetime
+    end
+
+    test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
+      input = <<0xc7, -1::signed-8, 123::signed-32, -150_427_200::signed-64>>
+      expected_datetime = ~N[1965-03-26 12:00:00.000000123]
 
       {:ok, result} = Msgpack.decode(input)
 
