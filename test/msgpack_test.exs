@@ -224,4 +224,54 @@ defmodule MsgpackTest do
       assert result == expected_datetime
     end
   end
+
+  describe "Observability" do
+    test "emits :encode, :stop event with safe metadata on successful encoding" do
+      test_pid = self()
+      handler_id = "test-handler-#{System.unique_integer()}"
+
+      :telemetry.attach(handler_id, [:msgpack, :encode, :stop], fn _, m, meta, _ ->
+        send(test_pid, {:telemetry_event, m, meta})
+      end, nil)
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      input = %{password: "s3cr3t", data: <<1, 2, 3>>}
+
+      {:ok, output} = Msgpack.encode(input)
+
+      assert_receive {:telemetry_event, measurements, metadata}
+      assert is_integer(measurements.duration)
+
+      refute Map.has_key?(metadata, :input)
+      refute Map.has_key?(metadata, :output)
+
+      assert metadata.input_term_type == Map
+      assert metadata.output_byte_size == byte_size(output)
+    end
+
+    test "emits :decode, :exception with safe metadata on decoding failure" do
+      test_pid = self()
+      handler_id = "test-handler-#{System.unique_integer()}"
+
+      :telemetry.attach(handler_id, [:msgpack, :decode, :exception], fn _, m, meta, _ ->
+        send(test_pid, {:telemetry_event, m, meta})
+      end, nil)
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      input = <<0xc1>>
+
+      try, do: Msgpack.decode!(input), rescue: _ -> :ok
+
+      assert_receive {:telemetry_event, measurements, metadata}
+      assert is_integer(measurements.duration)
+
+      refute Map.has_key?(metadata, :input)
+
+      assert metadata.kind == :error
+      assert metadata.reason.__struct__ == Msgpack.DecodeError
+      assert metadata.input_byte_size == byte_size(input)
+    end
+  end
 end
