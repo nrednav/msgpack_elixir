@@ -111,8 +111,6 @@ defmodule MsgpackTest do
   end
 
   describe "decode!/1" do
-    @describetag :skip
-
     test "returns the binary on successful encoding" do
       input = <<0x93, 1, 2, 3>>
       expected_term = [1,2,3]
