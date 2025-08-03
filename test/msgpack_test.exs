@@ -195,14 +195,14 @@ defmodule MsgpackTest do
         StreamData.float(),
         StreamData.string(:utf8),
         StreamData.binary(),
-        StreamData.map(StreamData.atom(), &Atom.to_string/1)
+        StreamData.atom(:alphanumeric) |> StreamData.map(&Atom.to_string/1)
       ]
 
       StreamData.recursive(StreamData.one_of(leaf_generators), fn inner_generator ->
         [
           StreamData.list_of(inner_generator),
           StreamData.map_of(StreamData.string(:utf8), inner_generator),
-          StreamData.tuple_of(inner_generator)
+          StreamData.list_of(inner_generator) |> StreamData.map(&List.to_tuple/1)
         ]
       end)
     end
