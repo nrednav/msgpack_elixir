@@ -63,8 +63,6 @@ defmodule MsgpackTest do
   end
 
   describe "decode/1" do
-    @describetag :skip
-
     test "successfully decodes a binary representing an array of an integer and a string" do
       input = <<0x92, 1, 0xa5, "hello">>
       expected_term = [1, "hello"]
@@ -88,7 +86,7 @@ defmodule MsgpackTest do
 
       result = Msgpack.decode(input)
 
-      assert match?({:error, {:malformed_binary, _reason}}, result)
+      assert result == {:error, :unexpected_eof}
     end
 
     test "returns a malformed binary error for an invalid format byte" do
@@ -96,7 +94,7 @@ defmodule MsgpackTest do
 
       result = Msgpack.decode(input)
 
-      assert match?({:error, {:malformed_binary, _reason}}, result)
+      assert result == {:error, {:unknown_prefix, 193}}
     end
 
     test "successfully decodes a float 32 binary" do

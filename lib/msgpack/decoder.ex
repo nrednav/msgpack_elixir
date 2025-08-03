@@ -1,0 +1,181 @@
+defmodule Msgpack.Decoder do
+  @moduledoc """
+  Handles the logic of decoding a MessagePack binary into an Elixir term.
+  """
+
+  @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, term()}
+  def decode(binary, opts \\ []) do
+    try do
+      with {:ok, {term, <<>>}} <- do_decode(binary, opts) do
+        {:ok, term}
+      else
+        {:ok, {_term, rest}} ->
+          {:error, {:trailing_bytes, rest}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    catch
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp do_decode(<<0xc0, rest::binary>>, _opts), do: {:ok, {nil, rest}}
+
+  # ==== Boolean ====
+  defp do_decode(<<0xc3, rest::binary>>, _opts), do: {:ok, {true, rest}}
+  defp do_decode(<<0xc2, rest::binary>>, _opts), do: {:ok, {false, rest}}
+
+  # ==== Integers ====
+  # ==== Positive Fixint ====
+  defp do_decode(<<int::8, rest::binary>>, _opts) when int < 128 do
+    {:ok, {int, rest}}
+  end
+
+  # ==== Negative Fixint ====
+  defp do_decode(<<int::signed-8, rest::binary>>, _opts) when int >= -32 and int < 0 do
+    {:ok, {int, rest}}
+  end
+
+  # ==== Unsigned Integers ====
+  defp do_decode(<<0xcc, int::8, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xcd, int::16, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xce, int::32, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xcf, int::64, rest::binary>>, _opts), do: {:ok, {int, rest}}
+
+  # ==== Signed Integers ====
+  defp do_decode(<<0xd0, int::signed-8, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xd1, int::signed-16, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xd2, int::signed-32, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xd3, int::signed-64, rest::binary>>, _opts), do: {:ok, {int, rest}}
+
+  # ==== Floats ====
+  defp do_decode(<<0xca, float::float-32, rest::binary>>, _opts), do: {:ok, {float, rest}}
+  defp do_decode(<<0xcb, float::float-64, rest::binary>>, _opts), do: {:ok, {float, rest}}
+
+  # ==== Strings ====
+  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0xa0 and prefix <= 0xbf do
+    size = prefix - 0xa0
+    decode_string(rest, size, opts)
+  end
+
+  defp do_decode(<<0xd9, size::8, rest::binary>>, opts), do: decode_string(rest, size, opts)
+  defp do_decode(<<0xda, size::16, rest::binary>>, opts), do: decode_string(rest, size, opts)
+  defp do_decode(<<0xdb, size::32, rest::binary>>, opts), do: decode_string(rest, size, opts)
+
+  # ==== Raw Binary ====
+  defp do_decode(<<0xc4, size::8, rest::binary>>, opts), do: decode_binary(rest, size, opts)
+  defp do_decode(<<0xc5, size::16, rest::binary>>, opts), do: decode_binary(rest, size, opts)
+  defp do_decode(<<0xc6, size::32, rest::binary>>, opts), do: decode_binary(rest, size, opts)
+
+  # ==== Arrays ====
+  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0x90 and prefix <= 0x9f do
+    size = prefix - 0x90
+    decode_array(rest, size, opts)
+  end
+
+  defp do_decode(<<0xdc, size::16, rest::binary>>, opts), do: decode_array(rest, size, opts)
+  defp do_decode(<<0xdd, size::32, rest::binary>>, opts), do: decode_array(rest, size, opts)
+
+  # ==== Maps ====
+  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0x80 and prefix <= 0x8f do
+    size = prefix - 0x80
+    decode_map(rest, size, opts)
+  end
+
+  defp do_decode(<<0xde, size::16, rest::binary>>, opts), do: decode_map(rest, size, opts)
+  defp do_decode(<<0xdf, size::32, rest::binary>>, opts), do: decode_map(rest, size, opts)
+
+  # ==== Unknown types ====
+  defp do_decode(<<prefix, _rest::binary>>, _opts) do
+    {:error, {:unknown_prefix, prefix}}
+  end
+
+  defp do_decode(<<>>, _opts) do
+    {:error, :unexpected_eof}
+  end
+
+  # ==== Helpers ====
+  defp decode_string(binary, size, opts) do
+    if max_size = opts[:max_byte_size], do: check_byte_size(size, max_size)
+
+    case binary do
+      <<string::binary-size(size), rest::binary>> ->
+        {:ok, {string, rest}}
+
+      _ ->
+        {:error, :unexpected_eof}
+    end
+  end
+
+  defp decode_string(_, _, _opts), do: {:error, :unexpected_eof}
+
+  defp decode_binary(binary, size, opts) do
+    if max_size = opts[:max_byte_size], do: check_byte_size(size, max_size)
+
+    case binary do
+      <<bin::binary-size(size), rest::binary>> ->
+        {:ok, {bin, rest}}
+
+      _ ->
+        {:error, :unexpected_eof}
+    end
+  end
+
+  defp decode_binary(_, _, _opts), do: {:error, :unexpected_eof}
+
+  defp decode_array(binary, size, opts) do
+    depth = opts[:depth] || 0
+    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
+
+    if max_size = opts[:max_byte_size], do: check_byte_size(size, max_size)
+
+    new_opts = Keyword.put(opts, :depth, depth + 1)
+
+    with {:ok, {elements, rest}} <- decode_many(binary, size, [], new_opts) do
+      {:ok, {elements, rest}}
+    end
+  end
+
+  defp decode_map(binary, size, opts) do
+    depth = opts[:depth] || 0
+    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
+
+    if max_size = opts[:max_byte_size], do: check_byte_size(size * 2, max_size)
+
+    new_opts = Keyword.put(opts, :depth, depth + 1)
+
+    with {:ok, {kv_pairs, rest}} <- decode_many(binary, size * 2, [], new_opts) do
+      map = Enum.chunk_every(kv_pairs, 2) |> Enum.into(%{})
+      {:ok, {map, rest}}
+    end
+  end
+
+  # Recursively decodes `count` terms from the binary
+  defp decode_many(binary, 0, acc, _opts) do
+    {:ok, {Enum.reverse(acc), binary}}
+  end
+
+  defp decode_many(binary, count, acc, opts) do
+    case do_decode(binary, opts) do
+      {:ok, {term, rest}} ->
+        decode_many(rest, count - 1, [term | acc], opts)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp check_byte_size(size, max_size) when size > max_size do
+    throw({:error, {:max_byte_size_exceeded, max_size}})
+  end
+
+  defp check_byte_size(_size, _max_size), do: :ok
+
+  defp check_depth(depth, max_depth) when depth >= max_depth do
+    throw({:error, {:max_depth_reached, max_depth}})
+  end
+
+  defp check_depth(_depth, _max_depth), do: :ok
+end
