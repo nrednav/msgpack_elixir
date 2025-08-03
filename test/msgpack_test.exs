@@ -9,101 +9,53 @@ defmodule MsgpackTest do
 
   describe "encode/1" do
     test "successfully encodes a map with lists and atoms" do
-      input = %{"tags" => [:a]}
-      expected_binary = <<0x81, 0xa4, "tags", 0x91, 0xa1, "a">>
-
-      result = Msgpack.encode(input)
-
-      assert result == {:ok, expected_binary}
+      assert_encode(%{"tags" => [:a]}, <<0x81, 0xa4, "tags", 0x91, 0xa1, "a">>)
     end
 
     test "successfully encodes a tuple as an array" do
-      input = {1, true, "hello"}
-      expected_binary = <<0x93, 1, 0xc3, 0xa5, "hello">>
-
-      result = Msgpack.encode(input)
-
-      assert result == {:ok, expected_binary}
+      assert_encode({1, true, "hello"}, <<0x93, 1, 0xc3, 0xa5, "hello">>)
     end
 
     test "returns an error tuple when trying to encode an unsupported type like a PID" do
       input = self()
-
-      result = Msgpack.encode(input)
-
-      assert result == {:error, {:unsupported_type, input}}
+      assert_encode_error(input, {:unsupported_type, input})
     end
 
     test "returns an error tuple when trying to encode a Reference" do
       input = make_ref()
-
-      result = Msgpack.encode(input)
-
-      assert result == {:error, {:unsupported_type, input}}
+      assert_encode_error(input, {:unsupported_type, input})
     end
   end
 
   describe "encode/2" do
-    test "with `atoms: :error` returns an error for atoms" do
-      input = [:foo]
-
-      result = Msgpack.encode(input, atoms: :error)
-
-      assert result == {:error, {:unsupported_atom, :foo}}
+    test "with `atoms: :string` (default) successfully encodes atoms" do
+      assert_encode([:foo], <<0x91, 0xa3, "foo">>)
     end
 
-    test "with `atoms: :string` (default) successfully encodes atoms" do
-      input = [:foo]
-      expected_binary = <<0x91, 0xa3, "foo">>
-
-      result_with_default = Msgpack.encode(input)
-
-      assert result_with_default == {:ok, expected_binary}
+    test "with `atoms: :error` returns an error for atoms" do
+      assert_encode_error([:foo], {:unsupported_atom, :foo}, atoms: :error)
     end
   end
 
   describe "decode/1" do
     test "successfully decodes a binary representing an array of an integer and a string" do
-      input = <<0x92, 1, 0xa5, "hello">>
-      expected_term = [1, "hello"]
-
-      result = Msgpack.decode(input)
-
-      assert result == {:ok, expected_term}
+      assert_decode(<<0x92, 1, 0xa5, "hello">>, [1, "hello"])
     end
 
     test "successfully decodes a binary representing a map" do
-      input = <<0x81, 0xa3, "foo", 0xa3, "bar">>
-      expected_term = %{"foo" => "bar"}
-
-      result = Msgpack.decode(input)
-
-      assert result == {:ok, expected_term}
+      assert_decode(<<0x81, 0xa3, "foo", 0xa3, "bar">>, %{"foo" => "bar"})
     end
 
     test "returns a malformed binary error for incomplete data" do
-      input = <<0x92, 1>>
-
-      result = Msgpack.decode(input)
-
-      assert result == {:error, :unexpected_eof}
+      assert_decode_error(<<0x92, 1>>, :unexpected_eof)
     end
 
     test "returns a malformed binary error for an invalid format byte" do
-      input = <<0xc1>>
-
-      result = Msgpack.decode(input)
-
-      assert result == {:error, {:unknown_prefix, 193}}
+      assert_decode_error(<<0xc1>>, {:unknown_prefix, 193})
     end
 
     test "successfully decodes a float 32 binary" do
-      input = <<0xca, 0x3FC00000::32>>
-      expected_term = 1.5
-
-      result = Msgpack.decode(input)
-
-      assert result == {:ok, expected_term}
+      assert_decode(<<0xca, 0x3FC00000::32>>, 1.5)
     end
   end
 
@@ -114,37 +66,30 @@ defmodule MsgpackTest do
       input = <<0x91, 0x91, 0x91, 1>>
       expected_term = [[[1]]]
 
-      assert Msgpack.decode(input, max_depth: 3) == {:ok, expected_term}
-      assert Msgpack.decode(input, max_depth: 4) == {:ok, expected_term}
-      assert match?(
-        {:error, {:max_depth_reached, 2}},
-        Msgpack.decode(input, max_depth: 2)
-      )
+      assert_decode(input, expected_term, max_depth: 3)
+      assert_decode(input, expected_term, max_depth: 4)
+      assert_decode_error(input, {:max_depth_reached, 2}, max_depth: 2)
     end
 
     test "returns an error when a declared string size exceeds :max_byte_size" do
       input = <<0xdb, 0xFFFFFFFF::32>>
       limit = 1_000_000 # 1MB limit
 
-      result = Msgpack.decode(input, max_byte_size: limit)
-
-      assert result == {:error, {:max_byte_size_exceeded, limit}}
+      assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
     end
 
     test "returns an error when a declared array size exceeds :max_byte_size" do
       input = <<0xdd, 0xFFFFFFFF::32>>
       limit = 1_000_000 # 1MB limit
 
-      result = Msgpack.decode(input, max_byte_size: limit)
-
-      assert result == {:error, {:max_byte_size_exceeded, limit}}
+      assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
     end
 
     test "successfully decodes data within byte size limit" do
       input = <<0xa5, "hello">>
       limit = 10
 
-      assert Msgpack.decode(input, max_byte_size: limit) == {:ok, "hello"}
+      assert_decode(input, "hello", max_byte_size: limit)
     end
   end
 
@@ -377,5 +322,23 @@ defmodule MsgpackTest do
 
       assert Float.is_nan(result)
     end
+  end
+
+  # ==== Helpers ====
+
+  defp assert_encode(input, expected_binary) do
+    assert Msgpack.encode(input) == {:ok, expected_binary}
+  end
+
+  defp assert_encode_error(input, expected_reason, opts \\ []) do
+    assert Msgpack.encode(input, opts) == {:error, expected_reason}
+  end
+
+  defp assert_decode(input_binary, expected_term, opts \\ []) do
+    assert Msgpack.decode(input_binary, opts) == {:ok, expected_term}
+  end
+
+  defp assert_decode_error(input_binary, expected_reason, opts \\ []) do
+    assert Msgpack.decode(input_binary, opts) == {:error, expected_reason}
   end
 end
