@@ -109,8 +109,6 @@ defmodule Msgpack.Decoder do
     end
   end
 
-  defp decode_string(_, _, _opts), do: {:error, :unexpected_eof}
-
   defp decode_binary(binary, size, opts) do
     if max_size = opts[:max_byte_size], do: check_byte_size(size, max_size)
 
@@ -122,8 +120,6 @@ defmodule Msgpack.Decoder do
         {:error, :unexpected_eof}
     end
   end
-
-  defp decode_binary(_, _, _opts), do: {:error, :unexpected_eof}
 
   defp decode_array(binary, size, opts) do
     depth = opts[:depth] || 0
