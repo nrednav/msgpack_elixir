@@ -127,8 +127,8 @@ defmodule Msgpack.Decoder do
 
   defp decode_array(binary, size, opts) do
     depth = opts[:depth] || 0
-    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
 
+    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
     if max_size = opts[:max_byte_size], do: check_byte_size(size, max_size)
 
     new_opts = Keyword.put(opts, :depth, depth + 1)
@@ -140,14 +140,18 @@ defmodule Msgpack.Decoder do
 
   defp decode_map(binary, size, opts) do
     depth = opts[:depth] || 0
-    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
 
+    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
     if max_size = opts[:max_byte_size], do: check_byte_size(size * 2, max_size)
 
     new_opts = Keyword.put(opts, :depth, depth + 1)
 
     with {:ok, {kv_pairs, rest}} <- decode_many(binary, size * 2, [], new_opts) do
-      map = Enum.chunk_every(kv_pairs, 2) |> Enum.into(%{})
+      map =
+        Enum.chunk_every(kv_pairs, 2)
+        |> Enum.map(&List.to_tuple/1)
+        |> Enum.into(%{})
+
       {:ok, {map, rest}}
     end
   end
