@@ -188,6 +188,10 @@ defmodule MsgpackTest do
     @describetag :skip
 
     defp supported_term_generator do
+      StreamData.sized(&do_supported_term_generator/1)
+    end
+
+    defp do_supported_term_generator(size) do
       leaf_generators = [
         StreamData.constant(nil),
         StreamData.boolean(),
@@ -198,13 +202,21 @@ defmodule MsgpackTest do
         StreamData.atom(:alphanumeric) |> StreamData.map(&Atom.to_string/1)
       ]
 
-      StreamData.recursive(StreamData.one_of(leaf_generators), fn inner_generator ->
-        [
+      leaf_generator = StreamData.one_of(leaf_generators)
+
+      if size == 0 do
+        leaf_generator
+      else
+        inner_generator = do_supported_term_generator(size - 1)
+
+        container_generators = [
           StreamData.list_of(inner_generator),
           StreamData.map_of(StreamData.string(:utf8), inner_generator),
           StreamData.list_of(inner_generator) |> StreamData.map(&List.to_tuple/1)
         ]
-      end)
+
+        StreamData.one_of([leaf_generator | container_generators])
+      end
     end
 
     property "encode! |> decode! is a lossless round trip for supported types" do
