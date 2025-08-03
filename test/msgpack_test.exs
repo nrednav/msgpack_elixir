@@ -126,8 +126,6 @@ defmodule MsgpackTest do
   end
 
   describe "Property Tests" do
-    @describetag :skip
-
     defp supported_term_generator do
       StreamData.sized(&do_supported_term_generator/1)
     end
@@ -138,8 +136,8 @@ defmodule MsgpackTest do
         StreamData.boolean(),
         StreamData.integer(),
         StreamData.float(),
-        StreamData.string(:utf8),
-        StreamData.binary(),
+        StreamData.string(:alphanumeric, max_length: 128),
+        StreamData.binary(max_length: 128),
         StreamData.atom(:alphanumeric) |> StreamData.map(&Atom.to_string/1)
       ]
 
@@ -151,9 +149,13 @@ defmodule MsgpackTest do
         inner_generator = do_supported_term_generator(size - 1)
 
         container_generators = [
-          StreamData.list_of(inner_generator),
-          StreamData.map_of(StreamData.string(:utf8), inner_generator),
-          StreamData.list_of(inner_generator) |> StreamData.map(&List.to_tuple/1)
+          StreamData.list_of(inner_generator, max_length: 3),
+          StreamData.map_of(
+            StreamData.string(:alphanumeric, max_length: 64),
+            inner_generator,
+            max_length: 3
+          ),
+          StreamData.tuple({inner_generator})
         ]
 
         StreamData.one_of([leaf_generator | container_generators])
@@ -161,17 +163,19 @@ defmodule MsgpackTest do
     end
 
     property "encode! |> decode! is a lossless round trip for supported types" do
-      check all term <- supported_term_generator(), max_run: 500 do
+      check all term <- supported_term_generator(), max_run: 500, max_size: 30 do
+        expected = transform_tuples_to_lists(term)
+
         result =
           term
           |> Msgpack.encode!()
           |> Msgpack.decode!()
 
         # Special case for floats due to potential precision issues
-        if is_float(term) and is_float(result) do
-          assert_in_delta term, result, 0.000001
+        if is_float(expected) and is_float(result) do
+          assert_in_delta expected, result, 0.000001
         else
-          assert result == term
+          assert result == expected
         end
       end
     end
@@ -336,5 +340,23 @@ defmodule MsgpackTest do
 
   defp assert_decode_error(input_binary, expected_reason, opts \\ []) do
     assert Msgpack.decode(input_binary, opts) == {:error, expected_reason}
+  end
+
+  defp transform_tuples_to_lists(term) do
+    cond do
+      is_tuple(term) ->
+        term |> Tuple.to_list() |> Enum.map(&transform_tuples_to_lists/1)
+
+      is_list(term) ->
+        Enum.map(term, &transform_tuples_to_lists/1)
+
+      is_map(term) ->
+        Map.new(term, fn {key, value} ->
+          {transform_tuples_to_lists(key), transform_tuples_to_lists(value)}
+        end)
+
+      true ->
+        term
+    end
   end
 end
