@@ -60,8 +60,6 @@ defmodule MsgpackTest do
   end
 
   describe "decode/2" do
-    @describetag :skip
-
     test "respects the :max_depth option" do
       input = <<0x91, 0x91, 0x91, 1>>
       expected_term = [[[1]]]
