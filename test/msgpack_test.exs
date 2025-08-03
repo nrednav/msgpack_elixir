@@ -35,7 +35,7 @@ defmodule MsgpackTest do
     end
 
     test "returns an error tuple when trying to encode a Reference" do
-      input = %{"ref" => make_ref()}
+      input = make_ref()
 
       result = Msgpack.encode(input)
 
