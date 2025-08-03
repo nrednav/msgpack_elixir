@@ -49,7 +49,7 @@ defmodule MsgpackTest do
 
       result = Msgpack.encode(input, atoms: :error)
 
-      assert result == {:error, {:unsupported_type, :foo}}
+      assert result == {:error, {:unsupported_atom, :foo}}
     end
 
     test "with `atoms: :string` (default) successfully encodes atoms" do
