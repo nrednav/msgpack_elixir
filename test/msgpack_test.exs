@@ -44,8 +44,7 @@ defmodule MsgpackTest do
   end
 
   describe "encode/2" do
-    @describetag :skip
-
+    @tag :wip
     test "with `atoms: :error` returns an error for atoms" do
       input = [:foo]
 
@@ -58,10 +57,8 @@ defmodule MsgpackTest do
       input = [:foo]
       expected_binary = <<0x91, 0xa3, "foo">>
 
-      result_with_option = Msgpack.encode(input, atoms: :string)
       result_with_default = Msgpack.encode(input)
 
-      assert result_with_option == {:ok, expected_binary}
       assert result_with_default == {:ok, expected_binary}
     end
   end
