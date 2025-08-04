@@ -1,4 +1,25 @@
 defmodule Msgpack do
+  @moduledoc """
+  An implementation of the MessagePack serialization format.
+
+  This module provides the main API for encoding Elixir terms into MessagePack
+  binaries and decoding MessagePack binaries back into Elixir terms.
+
+  ## Usage
+
+  The primary functions are `encode/2` and `decode/2` (and their
+  exception-raising variants `encode!/2` and `decode!/2`).
+
+  ### Example
+
+  ```elixir
+  iex> data = %{"compact" => true, "schema" => 0}
+  iex> {:ok, encoded} = Msgpack.encode(data)
+  iex> Msgpack.decode(encoded)
+  {:ok, %{"compact" => true, "schema" => 0}}
+  ```
+  """
+
   alias Msgpack.Encoder
   alias Msgpack.Decoder
   alias Msgpack.EncodeError
@@ -28,6 +49,9 @@ defmodule Msgpack do
 
     iex> Msgpack.encode(%{hello: "world"})
     {:ok, <<129, 165, 104, 101, 108, 108, 111, 165, 119, 111, 114, 108, 100>>}
+
+    iex> Msgpack.encode(:my_atom, atoms: :error)
+    {:error, {:unsupported_atom, :my_atom}}
   """
   @spec encode(term(), keyword()) :: {:ok, binary()} | {:error, error_reason()}
   def encode(term, opts \\ []) do
@@ -38,6 +62,15 @@ defmodule Msgpack do
 
   @doc """
   Encodes an Elixir term into a MessagePack binary, raising an error on failure.
+
+  ## Options
+
+  Accepts the same options as `encode/2`.
+
+  ## Raises
+
+    * `Msgpack.EncodeError` - if an unsupported Elixir term is encountered.
+    * `Msgpack.UnsupportedAtomError` - if an atom is encountered and the `:atoms` option is set to `:error`.
 
   ## Examples
     iex> Msgpack.encode!(%{hello: "world"})
@@ -61,6 +94,16 @@ defmodule Msgpack do
   Decodes a MessagePack binary into an Elixir term.
 
   Returns `{:ok, term}` on success, or `{:error, reason}` on failure.
+
+  ## Examples
+
+    iex> encoded = <<129, 165, 104, 101, 108, 108, 111, 165, 119, 111, 114, 108, 100>>
+
+    iex> Msgpack.decode(encoded)
+    {:ok, %{"hello" => "world"}}
+
+    iex> Msgpack.decode(<<192, 42>>)
+    {:error, {:trailing_bytes, <<42>>}}
   """
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, error_reason()}
   def decode(binary, opts \\ []) do
@@ -69,6 +112,21 @@ defmodule Msgpack do
 
   @doc """
   Decodes a MessagePack binary, raising a `Msgpack.DecodeError` on failure.
+
+  ## Options
+
+  Accepts the same options as `decode/2`.
+
+  ## Raises
+
+    * `Msgpack.DecodeError` - if the binary is malformed, contains an unknown prefix, or has trailing bytes.
+
+  ## Examples
+
+    iex> encoded = <<129, 165, 104, 101, 108, 108, 111, 165, 119, 111, 114, 108, 100>>
+
+    iex> Msgpack.decode!(<<255>>)
+    ** (Msgpack.DecodeError) unknown prefix: 255
   """
   @spec decode!(binary(), keyword()) :: term()
   def decode!(binary, opts \\ []) do

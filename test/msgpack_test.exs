@@ -7,7 +7,7 @@ defmodule MsgpackTest do
   alias Msgpack
   alias Msgpack.Ext
 
-  describe "encode/1" do
+  describe "encode/2" do
     test "successfully encodes a map with lists and atoms" do
       assert_encode(%{"tags" => [:a]}, <<0x81, 0xA4, "tags", 0x91, 0xA1, "a">>)
     end
@@ -25,9 +25,7 @@ defmodule MsgpackTest do
       input = make_ref()
       assert_encode_error(input, {:unsupported_type, input})
     end
-  end
 
-  describe "encode/2" do
     test "with `atoms: :string` (default) successfully encodes atoms" do
       assert_encode([:foo], <<0x91, 0xA3, "foo">>)
     end
@@ -37,7 +35,7 @@ defmodule MsgpackTest do
     end
   end
 
-  describe "decode/1" do
+  describe "decode/2" do
     test "successfully decodes a binary representing an array of an integer and a string" do
       assert_decode(<<0x92, 1, 0xA5, "hello">>, [1, "hello"])
     end
@@ -57,9 +55,7 @@ defmodule MsgpackTest do
     test "successfully decodes a float 32 binary" do
       assert_decode(<<0xCA, 0x3FC00000::32>>, 1.5)
     end
-  end
 
-  describe "decode/2" do
     test "respects the :max_depth option" do
       input = <<0x91, 0x91, 0x91, 1>>
       expected_term = [[[1]]]
@@ -71,7 +67,6 @@ defmodule MsgpackTest do
 
     test "returns an error when a declared string size exceeds :max_byte_size" do
       input = <<0xDB, 0xFFFFFFFF::32>>
-      # 1MB limit
       limit = 1_000_000
 
       assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
@@ -79,7 +74,6 @@ defmodule MsgpackTest do
 
     test "returns an error when a declared array size exceeds :max_byte_size" do
       input = <<0xDD, 0xFFFFFFFF::32>>
-      # 1MB limit
       limit = 1_000_000
 
       assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
@@ -93,7 +87,7 @@ defmodule MsgpackTest do
     end
   end
 
-  describe "encode!/1" do
+  describe "encode!/2" do
     test "returns the binary on successful encoding" do
       input = [1, 2, 3]
       expected_binary = <<0x93, 1, 2, 3>>
@@ -110,7 +104,7 @@ defmodule MsgpackTest do
     end
   end
 
-  describe "decode!/1" do
+  describe "decode!/2" do
     test "returns the binary on successful encoding" do
       input = <<0x93, 1, 2, 3>>
       expected_term = [1, 2, 3]
