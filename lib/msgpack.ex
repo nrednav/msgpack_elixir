@@ -108,6 +108,16 @@ defmodule Msgpack do
 
   Returns `{:ok, term}` on success, or `{:error, reason}` on failure.
 
+  ## Options
+
+    * `:max_depth` - Sets a limit on the nesting level of arrays and maps to
+    prevent stack exhaustion from maliciously crafted inputs.
+    Defaults to `100`.
+
+    * `:max_byte_size` - Sets a limit on the declared byte size of any single
+    string, binary, array, or map to prevent memory exhaustion attacks.
+    Defaults to `10_000_000` (10MB).
+
   ## Examples
 
     iex> encoded = <<129, 165, 104, 101, 108, 108, 111, 165, 119, 111, 114, 108, 100>>
@@ -117,6 +127,12 @@ defmodule Msgpack do
 
     iex> Msgpack.decode(<<192, 42>>)
     {:error, {:trailing_bytes, <<42>>}}
+
+    iex> Msgpack.decode(<<0x91, 0x91, 1>>, max_depth: 1)
+    {:error, {:max_depth_reached, 1}}
+
+    iex> Msgpack.decode(<<0xDB, 0xFFFFFFFF::32>>, max_byte_size: 1_000_000)
+    {:error, {:max_byte_size_exceeded, 1_000_000}}
   """
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, error_reason()}
   def decode(binary, opts \\ []) do
