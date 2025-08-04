@@ -17,20 +17,25 @@ defmodule Msgpack.Encoder do
 
   # ==== Integers ====
   defp do_encode(int, _opts) when is_integer(int) do
-    encoded_int =
-      cond do
-        int >= 0 and int < 128 -> <<int>>
-        int >= -32 and int < 0 -> <<int::signed-8>>
-        int >= 0 and int < 256 -> <<0xCC, int::8>>
-        int >= -128 and int < 128 -> <<0xD0, int::signed-8>>
-        int >= 0 and int < 65_536 -> <<0xCD, int::16>>
-        int >= -32_768 and int < 32_768 -> <<0xD1, int::signed-16>>
-        int >= 0 and int < 4_294_967_296 -> <<0xCE, int::32>>
-        int >= -2_147_483_648 and int < 2_147_483_648 -> <<0xD2, int::signed-32>>
-        true -> <<0xD3, int::signed-64>>
-      end
+    if int < -9_223_372_036_854_775_808 or int > 18_446_744_073_709_551_615 do
+      {:error, {:unsupported_type, int}}
+    else
+      encoded_int =
+        cond do
+          int >= 0 and int < 128 -> <<int>>
+          int >= -32 and int < 0 -> <<int::signed-8>>
+          int >= 0 and int < 256 -> <<0xCC, int::8>>
+          int >= -128 and int < 128 -> <<0xD0, int::signed-8>>
+          int >= 0 and int < 65_536 -> <<0xCD, int::16>>
+          int >= -32_768 and int < 32_768 -> <<0xD1, int::signed-16>>
+          int >= 0 and int < 4_294_967_296 -> <<0xCE, int::32>>
+          int >= -2_147_483_648 and int < 2_147_483_648 -> <<0xD2, int::signed-32>>
+          int >= 0 and int < 18_446_744_073_709_551_616 -> <<0xCF, int::unsigned-64>>
+          true -> <<0xD3, int::signed-64>>
+        end
 
-    {:ok, encoded_int}
+      {:ok, encoded_int}
+    end
   end
 
   # ==== Floats ====
