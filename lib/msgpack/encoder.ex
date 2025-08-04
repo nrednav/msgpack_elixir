@@ -149,17 +149,25 @@ defmodule Msgpack.Encoder do
 
   # ==== Maps ====
   defp do_encode(map, opts) when is_map(map) do
-    results =
-      Enum.map(map, fn {key, value} ->
-        with {:ok, encoded_key} <- do_encode(key, opts),
-             {:ok, encoded_value} <- do_encode(value, opts) do
-          {:ok, [encoded_key, encoded_value]}
-        end
-      end)
+    acc = {:ok, []}
 
-    with {:ok, encoded_pairs} <- sequence(results) do
-      size = map_size(map)
-      {:ok, [encode_map_header(size), encoded_pairs]}
+    reducer = fn {key, value}, {:ok, acc_list} ->
+      with {:ok, encoded_key} <- do_encode(key, opts),
+           {:ok, encoded_value} <- do_encode(value, opts) do
+        {:ok, [[encoded_key, encoded_value] | acc_list]}
+      else
+        error ->
+          {:error, error}
+      end
+    end
+
+    case Enum.reduce(map, acc, reducer) do
+      {:ok, encoded_pairs} ->
+        size = map_size(map)
+        {:ok, [encode_map_header(size), Enum.reverse(encoded_pairs)]}
+
+      {:error, error} ->
+        error
     end
   end
 
@@ -169,21 +177,6 @@ defmodule Msgpack.Encoder do
   end
 
   # ==== Helpers ====
-
-  # Takes a list of `{:ok, val}` or `{:error, reason}` tuples.
-  # Returns `{:ok, [vals]}` if all are successful, otherwise returns
-  # the first `{:error, reason}` encountered.
-  defp sequence(list_of_results) do
-    case Enum.find(list_of_results, &match?({:error, _}, &1)) do
-      nil ->
-        values = Enum.map(list_of_results, fn {:ok, value} -> value end)
-        {:ok, values}
-
-      error_tuple ->
-        error_tuple
-    end
-  end
-
   defp encode_string_header(size) when size < 32, do: <<0xA0 + size>>
   defp encode_string_header(size) when size < 256, do: <<0xD9, size::8>>
   defp encode_string_header(size) when size < 65_536, do: <<0xDA, size::16>>
