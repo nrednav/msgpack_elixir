@@ -19,7 +19,6 @@ defmodule Msgpack.Decoder do
         {:error, reason} ->
           {:error, reason}
       end
-
     catch
       {:error, reason} ->
         {:error, reason}
