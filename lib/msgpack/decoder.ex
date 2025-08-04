@@ -9,15 +9,17 @@ defmodule Msgpack.Decoder do
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, term()}
   def decode(binary, opts \\ []) do
     try do
-      with {:ok, {term, <<>>}} <- do_decode(binary, opts) do
-        {:ok, term}
-      else
+      case do_decode(binary, opts) do
+        {:ok, {term, <<>>}} ->
+          {:ok, term}
+
         {:ok, {_term, rest}} ->
           {:error, {:trailing_bytes, rest}}
 
         {:error, reason} ->
           {:error, reason}
       end
+
     catch
       {:error, reason} ->
         {:error, reason}
