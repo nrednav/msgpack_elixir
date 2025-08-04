@@ -16,6 +16,16 @@ defmodule MsgpackTest do
       assert_encode({1, true, "hello"}, <<0x93, 1, 0xC3, 0xA5, "hello">>)
     end
 
+    test "successfully encodes a map with non-string keys" do
+      input = %{
+        1 => "integer_key",
+        true => "boolean_key",
+        nil => "nil_key"
+      }
+
+      assert input |> Msgpack.encode!() |> Msgpack.decode!() == input
+    end
+
     test "returns an error tuple when trying to encode an unsupported type like a PID" do
       input = self()
       assert_encode_error(input, {:unsupported_type, input})
