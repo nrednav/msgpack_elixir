@@ -44,6 +44,18 @@ defmodule MsgpackTest do
       assert_encode_error([:foo], {:unsupported_atom, :foo}, atoms: :error)
     end
 
+    test "with :string_validation option handles binaries correctly" do
+      invalid_utf8_binary = <<255, "hello">>
+
+      assert Msgpack.encode(invalid_utf8_binary) ==
+        {:ok, <<0xC4, 6, 255, "hello">>}
+
+      # With validation disabled, it should be encoded as a `fixstr` (0xA6),
+      # even though it's not valid UTF-8. This confirms the option is working.
+      assert Msgpack.encode(invalid_utf8_binary, string_validation: false) ==
+               {:ok, <<0xA6, 255, "hello">>}
+    end
+
     test "returns an error for integers outside the specification's range" do
       large_int = 18_446_744_073_709_551_616
       assert_encode_error(large_int, {:unsupported_type, large_int})

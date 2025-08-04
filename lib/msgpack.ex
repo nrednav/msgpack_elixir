@@ -45,6 +45,13 @@ defmodule Msgpack do
       * `:string` (default) - Encodes atoms as MessagePack strings.
       * `:error` - Returns an `{:error, {:unsupported_atom, atom}}` tuple if an atom is encountered.
 
+    * `:string_validation` - Controls whether to perform UTF-8 validation on binaries.
+      * `true` (default) - Validates binaries and encodes them as the `str` type
+      if they are valid UTF-8, otherwise encodes them as the `bin` type
+      * `false` - Skips validation and encodes all binaries as the `str` type.
+      This provides a significant performance increase but should only be used
+      if you are certain that your data does not contain invalid UTF-8 strings.
+
   ## Examples
 
     iex> Msgpack.encode(%{hello: "world"})

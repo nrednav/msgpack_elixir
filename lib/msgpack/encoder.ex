@@ -64,14 +64,20 @@ defmodule Msgpack.Encoder do
   end
 
   # ==== Binaries (String + Raw) ====
-  defp do_encode(binary, _opts) when is_binary(binary) do
+  defp do_encode(binary, opts) when is_binary(binary) do
     size = byte_size(binary)
 
+    validate_string = Keyword.get(opts, :string_validation, true)
+
     encoded_binary =
-      if String.valid?(binary) do
-        [encode_string_header(size), binary]
+      if validate_string do
+        if String.valid?(binary) do
+          [encode_string_header(size), binary]
+        else
+          [encode_binary_header(size), binary]
+        end
       else
-        [encode_binary_header(size), binary]
+        [encode_string_header(size), binary]
       end
 
     {:ok, encoded_binary}
