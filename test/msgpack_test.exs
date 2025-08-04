@@ -247,6 +247,18 @@ defmodule MsgpackTest do
       assert_encode(input, expected_binary)
       assert_decode(expected_binary, input)
     end
+
+    test "switches from timestamp 32 to 64 at the correct boundary" do
+      t32_date = ~N[2106-02-07 06:28:15]
+      {:ok, t32_binary} = Msgpack.encode(t32_date)
+      assert t32_binary == <<0xD6, -1::signed-8, 4294967295::unsigned-32>>
+
+      # Adding one second exceeds the range, requiring timestamp 64.
+      # It should be encoded as a timestamp 64 with prefix 0xD7.
+      t64_date = ~N[2106-02-07 06:28:16]
+      {:ok, t64_binary} = Msgpack.encode(t64_date)
+      assert :binary.part(t64_binary, 0, 2) == <<0xD7, -1::signed-8>>
+    end
   end
 
   describe "Edge Case Data Types" do
