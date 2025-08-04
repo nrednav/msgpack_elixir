@@ -66,7 +66,19 @@ defmodule Msgpack.Encoder do
     {:ok, encoded_binary}
   end
 
-  # ==== Structs (NaiveDateTime and Ext) ====
+  # ==== Structs (DateTime, NaiveDateTime and Ext) ====
+  defp do_encode(%DateTime{} = datetime, opts) do
+    case DateTime.shift_zone(datetime, "Etc/UTC") do
+      {:ok, utc_datetime} ->
+        utc_datetime
+        |> DateTime.to_naive()
+        |> do_encode(opts)
+
+      {:error, _reason} ->
+        {:error, {:unsupported_type, datetime}}
+    end
+  end
+
   defp do_encode(%NaiveDateTime{} = datetime, _opts) do
     {:ok, encode_timestamp(datetime)}
   end

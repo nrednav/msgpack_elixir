@@ -190,6 +190,19 @@ defmodule MsgpackTest do
       assert result == input
     end
 
+    test "provides a lossless round trip for a standard DateTime struct" do
+      input = DateTime.from_naive!(~N[2025-01-01 10:00:00], "Etc/UTC")
+
+      expected = ~N[2025-01-01 10:00:00]
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert result == expected
+    end
+
     test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
       timestamp_96_binary = <<0xC7, 12, -1::signed-8, 0::unsigned-32, -315_619_200::signed-64>>
       {:ok, decoded} = Msgpack.decode(timestamp_96_binary)
