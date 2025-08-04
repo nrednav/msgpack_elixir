@@ -56,6 +56,14 @@ defmodule MsgpackTest do
       assert_encode(1.5, <<0xCA, 1.5::float-32>>)
       assert_encode(1.123456789, <<0xCB, 1.123456789::float-64>>)
     end
+
+    test "chooses the correct string format at the 31/32 byte boundary" do
+      string_31 = String.duplicate("a", 31)
+      assert_encode(string_31, <<0xBF, string_31::binary>>)
+
+      string_32 = String.duplicate("a", 32)
+      assert_encode(string_32, <<0xD9, 32, string_32::binary>>)
+    end
   end
 
   describe "decode/2" do
