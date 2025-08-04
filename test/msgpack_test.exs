@@ -34,6 +34,14 @@ defmodule MsgpackTest do
       assert_encode_error([:foo], {:unsupported_atom, :foo}, atoms: :error)
     end
 
+    test "returns an error for integers outside the specification's range" do
+      large_int = 18_446_744_073_709_551_616
+      assert_encode_error(large_int, {:unsupported_type, large_int})
+
+      small_int = -9_223_372_036_854_775_809
+      assert_encode_error(small_int, {:unsupported_type, small_int})
+    end
+
     test "encodes floats using the smallest possible format" do
       assert_encode(1.5, <<0xCA, 1.5::float-32>>)
       assert_encode(1.123456789, <<0xCB, 1.123456789::float-64>>)
