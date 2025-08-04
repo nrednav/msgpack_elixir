@@ -40,7 +40,13 @@ defmodule Msgpack.Encoder do
 
   # ==== Floats ====
   defp do_encode(float, _opts) when is_float(float) do
-    {:ok, <<0xCB, float::float-64>>}
+    <<decoded_as_32bit::float-32>> = <<float::float-32>>
+
+    if decoded_as_32bit == float do
+      {:ok, <<0xCA, float::float-32>>}
+    else
+      {:ok, <<0xCB, float::float-64>>}
+    end
   end
 
   # ==== Atoms ====

@@ -33,6 +33,11 @@ defmodule MsgpackTest do
     test "with `atoms: :error` returns an error for atoms" do
       assert_encode_error([:foo], {:unsupported_atom, :foo}, atoms: :error)
     end
+
+    test "encodes floats using the smallest possible format" do
+      assert_encode(1.5, <<0xCA, 1.5::float-32>>)
+      assert_encode(1.123456789, <<0xCB, 1.123456789::float-64>>)
+    end
   end
 
   describe "decode/2" do
