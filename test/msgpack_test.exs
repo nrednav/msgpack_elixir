@@ -267,6 +267,13 @@ defmodule MsgpackTest do
       result = input |> Msgpack.encode!() |> Msgpack.decode!()
       assert result == input
     end
+
+    test "provides a lossless round trip for empty collections" do
+      assert "" |> Msgpack.encode!() |> Msgpack.decode!() == ""
+      assert <<>> |> Msgpack.encode!() |> Msgpack.decode!() == <<>>
+      assert [] |> Msgpack.encode!() |> Msgpack.decode!() == []
+      assert %{} |> Msgpack.encode!() |> Msgpack.decode!() == %{}
+    end
   end
 
   # ==== Helpers ====
