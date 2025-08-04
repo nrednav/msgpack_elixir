@@ -55,9 +55,22 @@ defmodule Msgpack do
   """
   @spec encode(term(), keyword()) :: {:ok, binary()} | {:error, error_reason()}
   def encode(term, opts \\ []) do
-    with {:ok, iodata} <- Encoder.encode(term, opts) do
-      {:ok, IO.iodata_to_binary(iodata)}
-    end
+    :telemetry.span(
+      [:msgpack, :encode],
+      %{opts: opts, term: term},
+      fn ->
+        result = Encoder.encode(term, opts)
+
+        case result do
+          {:ok, iodata} ->
+            binary = IO.iodata_to_binary(iodata)
+            {{:ok, binary}, %{outcome: :ok, byte_size: byte_size(binary)}}
+
+          {:error, reason} ->
+            {{:error, reason}, %{outcome: :error}}
+        end
+      end
+    )
   end
 
   @doc """
@@ -107,7 +120,21 @@ defmodule Msgpack do
   """
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, error_reason()}
   def decode(binary, opts \\ []) do
-    Decoder.decode(binary, opts)
+    :telemetry.span(
+      [:msgpack, :decode],
+      %{opts: opts, byte_size: byte_size(binary)},
+      fn ->
+        result = Decoder.decode(binary, opts)
+
+        case result do
+          {:ok, term} ->
+            {{:ok, term}, %{outcome: :ok}}
+
+          {:error, reason} ->
+            {{:error, reason}, %{outcome: :error}}
+        end
+      end
+    )
   end
 
   @doc """
