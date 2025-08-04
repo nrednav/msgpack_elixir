@@ -161,9 +161,7 @@ defmodule Msgpack.Decoder do
 
     new_opts = Keyword.put(opts, :depth, depth + 1)
 
-    with {:ok, {elements, rest}} <- decode_many(binary, size, [], new_opts) do
-      {:ok, {elements, rest}}
-    end
+    decode_many(binary, size, [], new_opts)
   end
 
   defp decode_map(binary, size, opts) do
