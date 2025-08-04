@@ -120,11 +120,25 @@ defmodule Msgpack.Encoder do
 
   # ==== Lists ====
   defp do_encode(list, opts) when is_list(list) do
-    results = Enum.map(list, &do_encode(&1, opts))
+    acc = {:ok, []}
 
-    with {:ok, encoded_elements} <- sequence(results) do
-      size = length(list)
-      {:ok, [encode_array_header(size), encoded_elements]}
+    reducer = fn element, {:ok, acc_list} ->
+      case do_encode(element, opts) do
+        {:ok, encoded_element} ->
+          {:ok, [encoded_element | acc_list]}
+
+        error ->
+          {:error, error}
+      end
+    end
+
+    case Enum.reduce(list, acc, reducer) do
+      {:ok, encoded_elements} ->
+        size = length(list)
+        {:ok, [encode_array_header(size), Enum.reverse(encoded_elements)]}
+
+      {:error, error} ->
+        error
     end
   end
 
