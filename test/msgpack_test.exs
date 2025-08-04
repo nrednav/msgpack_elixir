@@ -221,7 +221,7 @@ defmodule MsgpackTest do
     test "provides a lossless round trip for NaN" do
       input = <<0x7FF8000000000001::float-64>>
       result = input |> Msgpack.encode!() |> Msgpack.decode!()
-      assert result == result
+      assert result == input
     end
   end
 
