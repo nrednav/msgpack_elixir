@@ -9,11 +9,11 @@ defmodule Msgpack.Encoder do
   end
 
   # ==== Nil ====
-  defp do_encode(nil, _opts), do: {:ok, <<0xc0>>}
+  defp do_encode(nil, _opts), do: {:ok, <<0xC0>>}
 
   # ==== Boolean ====
-  defp do_encode(true, _opts), do: {:ok, <<0xc3>>}
-  defp do_encode(false, _opts), do: {:ok, <<0xc2>>}
+  defp do_encode(true, _opts), do: {:ok, <<0xC3>>}
+  defp do_encode(false, _opts), do: {:ok, <<0xC2>>}
 
   # ==== Integers ====
   defp do_encode(int, _opts) when is_integer(int) do
@@ -21,13 +21,13 @@ defmodule Msgpack.Encoder do
       cond do
         int >= 0 and int < 128 -> <<int>>
         int >= -32 and int < 0 -> <<int::signed-8>>
-        int >= 0 and int < 256 -> <<0xcc, int::8>>
-        int >= -128 and int < 128 -> <<0xd0, int::signed-8>>
-        int >= 0 and int < 65_536 -> <<0xcd, int::16>>
-        int >= -32_768 and int < 32_768 -> <<0xd1, int::signed-16>>
-        int >= 0 and int < 4_294_967_296 -> <<0xce, int::32>>
-        int >= -2_147_483_648 and int < 2_147_483_648 -> <<0xd2, int::signed-32>>
-        true -> <<0xd3, int::signed-64>>
+        int >= 0 and int < 256 -> <<0xCC, int::8>>
+        int >= -128 and int < 128 -> <<0xD0, int::signed-8>>
+        int >= 0 and int < 65_536 -> <<0xCD, int::16>>
+        int >= -32_768 and int < 32_768 -> <<0xD1, int::signed-16>>
+        int >= 0 and int < 4_294_967_296 -> <<0xCE, int::32>>
+        int >= -2_147_483_648 and int < 2_147_483_648 -> <<0xD2, int::signed-32>>
+        true -> <<0xD3, int::signed-64>>
       end
 
     {:ok, encoded_int}
@@ -35,7 +35,7 @@ defmodule Msgpack.Encoder do
 
   # ==== Floats ====
   defp do_encode(float, _opts) when is_float(float) do
-    {:ok, <<0xcb, float::float-64>>}
+    {:ok, <<0xCB, float::float-64>>}
   end
 
   # ==== Atoms ====
@@ -76,14 +76,14 @@ defmodule Msgpack.Encoder do
 
     header =
       cond do
-        size == 1 -> <<0xd4, type::signed-8>>
-        size == 2 -> <<0xd5, type::signed-8>>
-        size == 4 -> <<0xd6, type::signed-8>>
-        size == 8 -> <<0xd7, type::signed-8>>
-        size == 16 -> <<0xd8, type::signed-8>>
-        size < 256 -> <<0xc7, size::8, type::signed-8>>
-        size < 65_536 -> <<0xc8, size::16, type::signed-8>>
-        true -> <<0xc9, size::32, type::signed-8>>
+        size == 1 -> <<0xD4, type::signed-8>>
+        size == 2 -> <<0xD5, type::signed-8>>
+        size == 4 -> <<0xD6, type::signed-8>>
+        size == 8 -> <<0xD7, type::signed-8>>
+        size == 16 -> <<0xD8, type::signed-8>>
+        size < 256 -> <<0xC7, size::8, type::signed-8>>
+        size < 65_536 -> <<0xC8, size::16, type::signed-8>>
+        true -> <<0xC9, size::32, type::signed-8>>
       end
 
     {:ok, [header, data]}
@@ -141,22 +141,22 @@ defmodule Msgpack.Encoder do
     end
   end
 
-  defp encode_string_header(size) when size < 32, do: <<0xa0 + size>>
-  defp encode_string_header(size) when size < 256, do: <<0xd9, size::8>>
-  defp encode_string_header(size) when size < 65_536, do: <<0xda, size::16>>
-  defp encode_string_header(size) when size < 4_294_967_296, do: <<0xdb, size::32>>
+  defp encode_string_header(size) when size < 32, do: <<0xA0 + size>>
+  defp encode_string_header(size) when size < 256, do: <<0xD9, size::8>>
+  defp encode_string_header(size) when size < 65_536, do: <<0xDA, size::16>>
+  defp encode_string_header(size) when size < 4_294_967_296, do: <<0xDB, size::32>>
 
-  defp encode_binary_header(size) when size < 256, do: <<0xc4, size::8>>
-  defp encode_binary_header(size) when size < 65_536, do: <<0xc5, size::16>>
-  defp encode_binary_header(size) when size < 4_294_967_296, do: <<0xc6, size::32>>
+  defp encode_binary_header(size) when size < 256, do: <<0xC4, size::8>>
+  defp encode_binary_header(size) when size < 65_536, do: <<0xC5, size::16>>
+  defp encode_binary_header(size) when size < 4_294_967_296, do: <<0xC6, size::32>>
 
   defp encode_array_header(size) when size < 16, do: <<0x90 + size>>
-  defp encode_array_header(size) when size < 65_536, do: <<0xdc, size::16>>
-  defp encode_array_header(size) when size < 4_294_967_296, do: <<0xdd, size::32>>
+  defp encode_array_header(size) when size < 65_536, do: <<0xDC, size::16>>
+  defp encode_array_header(size) when size < 4_294_967_296, do: <<0xDD, size::32>>
 
   defp encode_map_header(size) when size < 16, do: <<0x80 + size>>
-  defp encode_map_header(size) when size < 65_536, do: <<0xde, size::16>>
-  defp encode_map_header(size) when size < 4_294_967_296, do: <<0xdf, size::32>>
+  defp encode_map_header(size) when size < 65_536, do: <<0xDE, size::16>>
+  defp encode_map_header(size) when size < 4_294_967_296, do: <<0xDF, size::32>>
 
   defp encode_timestamp(datetime) do
     seconds = NaiveDateTime.diff(datetime, ~N[1970-01-01 00:00:00], :second)

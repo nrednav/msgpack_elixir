@@ -25,11 +25,11 @@ defmodule Msgpack.Decoder do
   end
 
   # ==== Nil ====
-  defp do_decode(<<0xc0, rest::binary>>, _opts), do: {:ok, {nil, rest}}
+  defp do_decode(<<0xC0, rest::binary>>, _opts), do: {:ok, {nil, rest}}
 
   # ==== Boolean ====
-  defp do_decode(<<0xc3, rest::binary>>, _opts), do: {:ok, {true, rest}}
-  defp do_decode(<<0xc2, rest::binary>>, _opts), do: {:ok, {false, rest}}
+  defp do_decode(<<0xC3, rest::binary>>, _opts), do: {:ok, {true, rest}}
+  defp do_decode(<<0xC2, rest::binary>>, _opts), do: {:ok, {false, rest}}
 
   # ==== Integers ====
   # ==== Positive Fixint ====
@@ -43,73 +43,79 @@ defmodule Msgpack.Decoder do
   end
 
   # ==== Unsigned Integers ====
-  defp do_decode(<<0xcc, int::8, rest::binary>>, _opts), do: {:ok, {int, rest}}
-  defp do_decode(<<0xcd, int::16, rest::binary>>, _opts), do: {:ok, {int, rest}}
-  defp do_decode(<<0xce, int::32, rest::binary>>, _opts), do: {:ok, {int, rest}}
-  defp do_decode(<<0xcf, int::64, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xCC, int::8, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xCD, int::16, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xCE, int::32, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xCF, int::64, rest::binary>>, _opts), do: {:ok, {int, rest}}
 
   # ==== Signed Integers ====
-  defp do_decode(<<0xd0, int::signed-8, rest::binary>>, _opts), do: {:ok, {int, rest}}
-  defp do_decode(<<0xd1, int::signed-16, rest::binary>>, _opts), do: {:ok, {int, rest}}
-  defp do_decode(<<0xd2, int::signed-32, rest::binary>>, _opts), do: {:ok, {int, rest}}
-  defp do_decode(<<0xd3, int::signed-64, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xD0, int::signed-8, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xD1, int::signed-16, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xD2, int::signed-32, rest::binary>>, _opts), do: {:ok, {int, rest}}
+  defp do_decode(<<0xD3, int::signed-64, rest::binary>>, _opts), do: {:ok, {int, rest}}
 
   # ==== Floats ====
-  defp do_decode(<<0xca, float::float-32, rest::binary>>, _opts), do: {:ok, {float, rest}}
-  defp do_decode(<<0xcb, float::float-64, rest::binary>>, _opts), do: {:ok, {float, rest}}
+  defp do_decode(<<0xCA, float::float-32, rest::binary>>, _opts), do: {:ok, {float, rest}}
+  defp do_decode(<<0xCB, float::float-64, rest::binary>>, _opts), do: {:ok, {float, rest}}
 
   # ==== Strings ====
-  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0xa0 and prefix <= 0xbf do
-    size = prefix - 0xa0
+  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0xA0 and prefix <= 0xBF do
+    size = prefix - 0xA0
     decode_string(rest, size, opts)
   end
 
-  defp do_decode(<<0xd9, size::8, rest::binary>>, opts), do: decode_string(rest, size, opts)
-  defp do_decode(<<0xda, size::16, rest::binary>>, opts), do: decode_string(rest, size, opts)
-  defp do_decode(<<0xdb, size::32, rest::binary>>, opts), do: decode_string(rest, size, opts)
+  defp do_decode(<<0xD9, size::8, rest::binary>>, opts), do: decode_string(rest, size, opts)
+  defp do_decode(<<0xDA, size::16, rest::binary>>, opts), do: decode_string(rest, size, opts)
+  defp do_decode(<<0xDB, size::32, rest::binary>>, opts), do: decode_string(rest, size, opts)
 
   # ==== Raw Binary ====
-  defp do_decode(<<0xc4, size::8, rest::binary>>, opts), do: decode_binary(rest, size, opts)
-  defp do_decode(<<0xc5, size::16, rest::binary>>, opts), do: decode_binary(rest, size, opts)
-  defp do_decode(<<0xc6, size::32, rest::binary>>, opts), do: decode_binary(rest, size, opts)
+  defp do_decode(<<0xC4, size::8, rest::binary>>, opts), do: decode_binary(rest, size, opts)
+  defp do_decode(<<0xC5, size::16, rest::binary>>, opts), do: decode_binary(rest, size, opts)
+  defp do_decode(<<0xC6, size::32, rest::binary>>, opts), do: decode_binary(rest, size, opts)
 
   # ==== Arrays ====
-  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0x90 and prefix <= 0x9f do
+  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0x90 and prefix <= 0x9F do
     size = prefix - 0x90
     decode_array(rest, size, opts)
   end
 
-  defp do_decode(<<0xdc, size::16, rest::binary>>, opts), do: decode_array(rest, size, opts)
-  defp do_decode(<<0xdd, size::32, rest::binary>>, opts), do: decode_array(rest, size, opts)
+  defp do_decode(<<0xDC, size::16, rest::binary>>, opts), do: decode_array(rest, size, opts)
+  defp do_decode(<<0xDD, size::32, rest::binary>>, opts), do: decode_array(rest, size, opts)
 
   # ==== Maps ====
-  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0x80 and prefix <= 0x8f do
+  defp do_decode(<<prefix, rest::binary>>, opts) when prefix >= 0x80 and prefix <= 0x8F do
     size = prefix - 0x80
     decode_map(rest, size, opts)
   end
 
-  defp do_decode(<<0xde, size::16, rest::binary>>, opts), do: decode_map(rest, size, opts)
-  defp do_decode(<<0xdf, size::32, rest::binary>>, opts), do: decode_map(rest, size, opts)
+  defp do_decode(<<0xDE, size::16, rest::binary>>, opts), do: decode_map(rest, size, opts)
+  defp do_decode(<<0xDF, size::32, rest::binary>>, opts), do: decode_map(rest, size, opts)
 
   # ==== Extensions & Timestamps ====
   # ==== Fixext ====
-  defp do_decode(<<0xd4, type::signed-8, data::binary-size(1), rest::binary>>, opts),
+  defp do_decode(<<0xD4, type::signed-8, data::binary-size(1), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
-  defp do_decode(<<0xd5, type::signed-8, data::binary-size(2), rest::binary>>, opts),
+
+  defp do_decode(<<0xD5, type::signed-8, data::binary-size(2), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
-  defp do_decode(<<0xd6, type::signed-8, data::binary-size(4), rest::binary>>, opts),
+
+  defp do_decode(<<0xD6, type::signed-8, data::binary-size(4), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
-  defp do_decode(<<0xd7, type::signed-8, data::binary-size(8), rest::binary>>, opts),
+
+  defp do_decode(<<0xD7, type::signed-8, data::binary-size(8), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
-  defp do_decode(<<0xd8, type::signed-8, data::binary-size(16), rest::binary>>, opts),
+
+  defp do_decode(<<0xD8, type::signed-8, data::binary-size(16), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
 
   # ==== Ext ====
-  defp do_decode(<<0xc7, len::8, type::signed-8, data::binary-size(len), rest::binary>>, opts),
+  defp do_decode(<<0xC7, len::8, type::signed-8, data::binary-size(len), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
-  defp do_decode(<<0xc8, len::16, type::signed-8, data::binary-size(len), rest::binary>>, opts),
+
+  defp do_decode(<<0xC8, len::16, type::signed-8, data::binary-size(len), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
-  defp do_decode(<<0xc9, len::32, type::signed-8, data::binary-size(len), rest::binary>>, opts),
+
+  defp do_decode(<<0xC9, len::32, type::signed-8, data::binary-size(len), rest::binary>>, opts),
     do: decode_ext(type, data, rest, opts)
 
   # ==== Unknown types ====
@@ -246,5 +252,4 @@ defmodule Msgpack.Decoder do
   end
 
   defp check_depth(_depth, _max_depth), do: :ok
-
 end

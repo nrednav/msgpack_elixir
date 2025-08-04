@@ -4,14 +4,14 @@ defmodule Msgpack do
   alias Msgpack.EncodeError
   alias Msgpack.DecodeError
 
+  # Encoding errors
   @type error_reason ::
-    # Encoding errors
-    {:unsupported_type, term()}
-    | {:unsupported_atom, atom()}
-    # Decoding errors
-    | :unexpected_eof
-    | {:unknown_prefix, byte()}
-    | {:trailing_bytes, binary()}
+          {:unsupported_type, term()}
+          | {:unsupported_atom, atom()}
+          # Decoding errors
+          | :unexpected_eof
+          | {:unknown_prefix, byte()}
+          | {:trailing_bytes, binary()}
 
   @doc """
   Encodes an Elixir term into a MessagePack binary.

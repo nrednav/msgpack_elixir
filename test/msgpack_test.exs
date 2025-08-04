@@ -9,11 +9,11 @@ defmodule MsgpackTest do
 
   describe "encode/1" do
     test "successfully encodes a map with lists and atoms" do
-      assert_encode(%{"tags" => [:a]}, <<0x81, 0xa4, "tags", 0x91, 0xa1, "a">>)
+      assert_encode(%{"tags" => [:a]}, <<0x81, 0xA4, "tags", 0x91, 0xA1, "a">>)
     end
 
     test "successfully encodes a tuple as an array" do
-      assert_encode({1, true, "hello"}, <<0x93, 1, 0xc3, 0xa5, "hello">>)
+      assert_encode({1, true, "hello"}, <<0x93, 1, 0xC3, 0xA5, "hello">>)
     end
 
     test "returns an error tuple when trying to encode an unsupported type like a PID" do
@@ -29,7 +29,7 @@ defmodule MsgpackTest do
 
   describe "encode/2" do
     test "with `atoms: :string` (default) successfully encodes atoms" do
-      assert_encode([:foo], <<0x91, 0xa3, "foo">>)
+      assert_encode([:foo], <<0x91, 0xA3, "foo">>)
     end
 
     test "with `atoms: :error` returns an error for atoms" do
@@ -39,11 +39,11 @@ defmodule MsgpackTest do
 
   describe "decode/1" do
     test "successfully decodes a binary representing an array of an integer and a string" do
-      assert_decode(<<0x92, 1, 0xa5, "hello">>, [1, "hello"])
+      assert_decode(<<0x92, 1, 0xA5, "hello">>, [1, "hello"])
     end
 
     test "successfully decodes a binary representing a map" do
-      assert_decode(<<0x81, 0xa3, "foo", 0xa3, "bar">>, %{"foo" => "bar"})
+      assert_decode(<<0x81, 0xA3, "foo", 0xA3, "bar">>, %{"foo" => "bar"})
     end
 
     test "returns a malformed binary error for incomplete data" do
@@ -51,11 +51,11 @@ defmodule MsgpackTest do
     end
 
     test "returns a malformed binary error for an invalid format byte" do
-      assert_decode_error(<<0xc1>>, {:unknown_prefix, 193})
+      assert_decode_error(<<0xC1>>, {:unknown_prefix, 193})
     end
 
     test "successfully decodes a float 32 binary" do
-      assert_decode(<<0xca, 0x3FC00000::32>>, 1.5)
+      assert_decode(<<0xCA, 0x3FC00000::32>>, 1.5)
     end
   end
 
@@ -70,21 +70,23 @@ defmodule MsgpackTest do
     end
 
     test "returns an error when a declared string size exceeds :max_byte_size" do
-      input = <<0xdb, 0xFFFFFFFF::32>>
-      limit = 1_000_000 # 1MB limit
+      input = <<0xDB, 0xFFFFFFFF::32>>
+      # 1MB limit
+      limit = 1_000_000
 
       assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
     end
 
     test "returns an error when a declared array size exceeds :max_byte_size" do
-      input = <<0xdd, 0xFFFFFFFF::32>>
-      limit = 1_000_000 # 1MB limit
+      input = <<0xDD, 0xFFFFFFFF::32>>
+      # 1MB limit
+      limit = 1_000_000
 
       assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
     end
 
     test "successfully decodes data within byte size limit" do
-      input = <<0xa5, "hello">>
+      input = <<0xA5, "hello">>
       limit = 10
 
       assert_decode(input, "hello", max_byte_size: limit)
@@ -93,7 +95,7 @@ defmodule MsgpackTest do
 
   describe "encode!/1" do
     test "returns the binary on successful encoding" do
-      input = [1,2,3]
+      input = [1, 2, 3]
       expected_binary = <<0x93, 1, 2, 3>>
 
       assert Msgpack.encode!(input) == expected_binary
@@ -111,7 +113,7 @@ defmodule MsgpackTest do
   describe "decode!/1" do
     test "returns the binary on successful encoding" do
       input = <<0x93, 1, 2, 3>>
-      expected_term = [1,2,3]
+      expected_term = [1, 2, 3]
 
       assert Msgpack.decode!(input) == expected_term
     end
@@ -163,7 +165,7 @@ defmodule MsgpackTest do
     end
 
     property "encode! |> decode! is a lossless round trip for supported types" do
-      check all term <- supported_term_generator(), max_run: 500, max_size: 30 do
+      check all(term <- supported_term_generator(), max_run: 500, max_size: 30) do
         expected = transform_tuples_to_lists(term)
 
         result =
@@ -195,14 +197,14 @@ defmodule MsgpackTest do
     end
 
     test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
-      timestamp_96_binary = <<0xc7, 12, -1::signed-8, 0::unsigned-32, -315619200::signed-64>>
+      timestamp_96_binary = <<0xC7, 12, -1::signed-8, 0::unsigned-32, -315_619_200::signed-64>>
       {:ok, decoded} = Msgpack.decode(timestamp_96_binary)
       assert decoded == ~N[1960-01-01 00:00:00]
     end
 
     test "encodes and decodes a timestamp 32 correctly" do
       input = ~N[2022-01-01 12:00:00]
-      expected_binary = <<0xd6, -1::signed-8, 1641038400::unsigned-32>>
+      expected_binary = <<0xD6, -1::signed-8, 1_641_038_400::unsigned-32>>
 
       assert_encode(input, expected_binary)
       assert_decode(expected_binary, input)
