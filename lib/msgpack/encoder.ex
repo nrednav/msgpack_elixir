@@ -3,9 +3,6 @@ defmodule Msgpack.Encoder do
   Handles the logic of encoding Elixir terms into iodata.
   """
 
-  # The number of gregorian seconds from year 0 to the Unix epoch. This is a constant.
-  @epoch_offset :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
-
   @spec encode(term(), keyword()) :: {:ok, iodata()} | {:error, term()}
   def encode(term, opts) do
     do_encode(term, opts)
@@ -162,29 +159,22 @@ defmodule Msgpack.Encoder do
   defp encode_map_header(size) when size < 4_294_967_296, do: <<0xdf, size::32>>
 
   defp encode_timestamp(datetime) do
-    # Convert Elixir's struct to Erlang's tuple format
-    erlang_datetime = NaiveDateTime.to_erl(datetime)
-    # Get the total seconds since year 0 for our datetime
-    total_seconds = :calendar.datetime_to_gregorian_seconds(erlang_datetime)
-    # Subtract the epoch offset to get the final Unix timestamp
-    seconds = total_seconds - @epoch_offset
+    seconds = NaiveDateTime.diff(datetime, ~N[1970-01-01 00:00:00], :second)
+    nanoseconds = elem(datetime.microsecond, 0) * 1000
 
-    {microseconds, _} = datetime.microsecond
-    nanoseconds = microseconds * 1000
+    cond do
+      # Timestamp 32: nanoseconds are 0 and seconds fit in 32 bits
+      nanoseconds == 0 and seconds >= 0 and seconds <= 0xFFFFFFFF ->
+        [<<0xD6, -1::signed-8>>, <<seconds::unsigned-32>>]
 
-    # The logic to choose the correct timestamp format remains the same
-    if seconds < 0 or seconds >= :erlang.bsl(1, 34) do
-      # Timestamp 96
-      <<0xc7, 12, -1::signed-8, nanoseconds::unsigned-32, seconds::signed-64>>
-    else
-      if nanoseconds == 0 and seconds >= 0 do
-        # Timestamp 32
-        <<0xd6, -1::signed-8, seconds::unsigned-32>>
-      else
-        # Timestamp 64
-        data64 = :erlang.bor(:erlang.bsl(nanoseconds, 34), seconds)
-        <<0xd7, -1::signed-8, data64::unsigned-64>>
-      end
+      # Timestamp 64: seconds fit in 34 bits
+      seconds >= 0 and seconds < 0x400000000 ->
+        data = Bitwise.bor(Bitwise.bsl(nanoseconds, 34), seconds)
+        [<<0xD7, -1::signed-8>>, <<data::64>>]
+
+      # Timestamp 96: fallback for all other dates (pre-epoch or far-future)
+      true ->
+        [<<0xC7, 12, -1::signed-8>>, <<nanoseconds::32, seconds::signed-64>>]
     end
   end
 end

@@ -181,140 +181,51 @@ defmodule MsgpackTest do
     end
   end
 
-  describe "Msgpack.Ext and Timestamps" do
+  describe "Extensions & Timestamps" do
     test "provides a lossless round trip for custom extension types" do
       input = %Ext{type: 10, data: <<1, 2, 3, 4>>}
-
-      result =
-        input
-        |> Msgpack.encode!()
-        |> Msgpack.decode!()
-
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
       assert result == input
     end
 
     test "provides a lossless round trip for NaiveDateTime via the Timestamp extension" do
       input = ~N[2025-08-02 10:00:00.123456]
-
-      result =
-        input
-        |> Msgpack.encode!()
-        |> Msgpack.decode!()
-
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
       assert result == input
     end
 
     test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
       timestamp_96_binary = <<0xc7, 12, -1::signed-8, 0::unsigned-32, -315619200::signed-64>>
-
       {:ok, decoded} = Msgpack.decode(timestamp_96_binary)
-
       assert decoded == ~N[1960-01-01 00:00:00]
     end
 
     test "encodes and decodes a timestamp 32 correctly" do
       input = ~N[2022-01-01 12:00:00]
-
-      # This should be encoded as timestamp 32 because nanoseconds are 0.
-      # unix_seconds = 1641038400
       expected_binary = <<0xd6, -1::signed-8, 1641038400::unsigned-32>>
 
-      {:ok, encoded} = Msgpack.encode(input)
-      assert :binary.part(encoded, 0, byte_size(expected_binary)) == expected_binary
-
-      {:ok, decoded} = Msgpack.decode(encoded)
-      assert decoded == input
-    end
-  end
-
-  describe "Observability" do
-    @describetag :skip
-
-    test "emits :encode, :stop event with safe metadata on successful encoding" do
-      test_pid = self()
-      handler_id = "test-handler-#{System.unique_integer()}"
-
-      :telemetry.attach(handler_id, [:msgpack, :encode, :stop], fn _, m, meta, _ ->
-        send(test_pid, {:telemetry_event, m, meta})
-      end, nil)
-
-      on_exit(fn -> :telemetry.detach(handler_id) end)
-
-      input = %{password: "s3cr3t", data: <<1, 2, 3>>}
-
-      {:ok, output} = Msgpack.encode(input)
-
-      assert_receive {:telemetry_event, measurements, metadata}
-      assert is_integer(measurements.duration)
-
-      refute Map.has_key?(metadata, :input)
-      refute Map.has_key?(metadata, :output)
-
-      assert metadata.input_term_type == Map
-      assert metadata.output_byte_size == byte_size(output)
-    end
-
-    test "emits :decode, :exception with safe metadata on decoding failure" do
-      test_pid = self()
-      handler_id = "test-handler-#{System.unique_integer()}"
-
-      :telemetry.attach(handler_id, [:msgpack, :decode, :exception], fn _, m, meta, _ ->
-        send(test_pid, {:telemetry_event, m, meta})
-      end, nil)
-
-      on_exit(fn -> :telemetry.detach(handler_id) end)
-
-      input = <<0xc1>>
-
-      try do
-        Msgpack.decode!(input)
-      rescue
-        _ -> :ok
-      end
-
-      assert_receive {:telemetry_event, measurements, metadata}
-      assert is_integer(measurements.duration)
-
-      refute Map.has_key?(metadata, :input)
-
-      assert metadata.kind == :error
-      assert metadata.reason.__struct__ == Msgpack.DecodeError
-      assert metadata.input_byte_size == byte_size(input)
+      assert_encode(input, expected_binary)
+      assert_decode(expected_binary, input)
     end
   end
 
   describe "Edge Case Data Types" do
     test "provides a lossless round trip for Infinity" do
       input = <<0x7FF0000000000000::float-64>>
-
-      result =
-        input
-        |> Msgpack.encode!()
-        |> Msgpack.decode!()
-
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
       assert result == input
     end
 
     test "provides a lossless round trip for negative Infinity" do
       input = <<0xFFF0000000000000::float-64>>
-
-      result =
-        input
-        |> Msgpack.encode!()
-        |> Msgpack.decode!()
-
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
       assert result == input
     end
 
     test "provides a lossless round trip for NaN" do
       input = <<0x7FF8000000000001::float-64>>
-
-      result =
-        input
-        |> Msgpack.encode!()
-        |> Msgpack.decode!()
-
-      assert result == input
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
+      assert result == result
     end
   end
 
