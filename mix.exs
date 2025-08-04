@@ -31,7 +31,8 @@ defmodule MsgpackElixir.MixProject do
       {:telemetry, "~> 1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
-      {:stream_data, "~> 1.0", only: :test}
+      {:stream_data, "~> 1.0", only: :test},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 
