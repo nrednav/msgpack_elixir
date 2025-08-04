@@ -3,11 +3,15 @@ defmodule Msgpack.Encoder do
   Handles the logic of encoding Elixir terms into iodata.
   """
 
+  # The number of gregorian seconds from year 0 to the Unix epoch. This is a constant.
+  @epoch_offset :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
+
   @spec encode(term(), keyword()) :: {:ok, iodata()} | {:error, term()}
   def encode(term, opts) do
     do_encode(term, opts)
   end
 
+  # ==== Nil ====
   defp do_encode(nil, _opts), do: {:ok, <<0xc0>>}
 
   # ==== Boolean ====
@@ -63,6 +67,29 @@ defmodule Msgpack.Encoder do
       end
 
     {:ok, encoded_binary}
+  end
+
+  # ==== Structs (NaiveDateTime and Ext) ====
+  defp do_encode(%NaiveDateTime{} = datetime, _opts) do
+    {:ok, encode_timestamp(datetime)}
+  end
+
+  defp do_encode(%Msgpack.Ext{type: type, data: data}, _opts) do
+    size = byte_size(data)
+
+    header =
+      cond do
+        size == 1 -> <<0xd4, type::signed-8>>
+        size == 2 -> <<0xd5, type::signed-8>>
+        size == 4 -> <<0xd6, type::signed-8>>
+        size == 8 -> <<0xd7, type::signed-8>>
+        size == 16 -> <<0xd8, type::signed-8>>
+        size < 256 -> <<0xc7, size::8, type::signed-8>>
+        size < 65_536 -> <<0xc8, size::16, type::signed-8>>
+        true -> <<0xc9, size::32, type::signed-8>>
+      end
+
+    {:ok, [header, data]}
   end
 
   # ==== Lists ====
@@ -133,4 +160,31 @@ defmodule Msgpack.Encoder do
   defp encode_map_header(size) when size < 16, do: <<0x80 + size>>
   defp encode_map_header(size) when size < 65_536, do: <<0xde, size::16>>
   defp encode_map_header(size) when size < 4_294_967_296, do: <<0xdf, size::32>>
+
+  defp encode_timestamp(datetime) do
+    # Convert Elixir's struct to Erlang's tuple format
+    erlang_datetime = NaiveDateTime.to_erl(datetime)
+    # Get the total seconds since year 0 for our datetime
+    total_seconds = :calendar.datetime_to_gregorian_seconds(erlang_datetime)
+    # Subtract the epoch offset to get the final Unix timestamp
+    seconds = total_seconds - @epoch_offset
+
+    {microseconds, _} = datetime.microsecond
+    nanoseconds = microseconds * 1000
+
+    # The logic to choose the correct timestamp format remains the same
+    if seconds < 0 or seconds >= :erlang.bsl(1, 34) do
+      # Timestamp 96
+      <<0xc7, 12, -1::signed-8, nanoseconds::unsigned-32, seconds::signed-64>>
+    else
+      if nanoseconds == 0 and seconds >= 0 do
+        # Timestamp 32
+        <<0xd6, -1::signed-8, seconds::unsigned-32>>
+      else
+        # Timestamp 64
+        data64 = :erlang.bor(:erlang.bsl(nanoseconds, 34), seconds)
+        <<0xd7, -1::signed-8, data64::unsigned-64>>
+      end
+    end
+  end
 end

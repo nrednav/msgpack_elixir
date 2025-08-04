@@ -3,6 +3,9 @@ defmodule Msgpack.Decoder do
   Handles the logic of decoding a MessagePack binary into an Elixir term.
   """
 
+  # The number of gregorian seconds from year 0 to the Unix epoch. This is a constant.
+  @epoch_offset :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
+
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, term()}
   def decode(binary, opts \\ []) do
     try do
@@ -21,6 +24,7 @@ defmodule Msgpack.Decoder do
     end
   end
 
+  # ==== Nil ====
   defp do_decode(<<0xc0, rest::binary>>, _opts), do: {:ok, {nil, rest}}
 
   # ==== Boolean ====
@@ -86,6 +90,27 @@ defmodule Msgpack.Decoder do
 
   defp do_decode(<<0xde, size::16, rest::binary>>, opts), do: decode_map(rest, size, opts)
   defp do_decode(<<0xdf, size::32, rest::binary>>, opts), do: decode_map(rest, size, opts)
+
+  # ==== Extensions & Timestamps ====
+  # ==== Fixext ====
+  defp do_decode(<<0xd4, type::signed-8, data::binary-size(1), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+  defp do_decode(<<0xd5, type::signed-8, data::binary-size(2), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+  defp do_decode(<<0xd6, type::signed-8, data::binary-size(4), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+  defp do_decode(<<0xd7, type::signed-8, data::binary-size(8), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+  defp do_decode(<<0xd8, type::signed-8, data::binary-size(16), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+
+  # ==== Ext ====
+  defp do_decode(<<0xc7, len::8, type::signed-8, data::binary-size(len), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+  defp do_decode(<<0xc8, len::16, type::signed-8, data::binary-size(len), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
+  defp do_decode(<<0xc9, len::32, type::signed-8, data::binary-size(len), rest::binary>>, opts),
+    do: decode_ext(type, data, rest, opts)
 
   # ==== Unknown types ====
   defp do_decode(<<prefix, _rest::binary>>, _opts) do
@@ -167,6 +192,49 @@ defmodule Msgpack.Decoder do
     end
   end
 
+  defp decode_ext(-1, data, rest, _opts) do
+    {:ok, {decode_timestamp(data), rest}}
+  end
+
+  defp decode_ext(type, data, rest, _opts) do
+    {:ok, {%Msgpack.Ext{type: type, data: data}, rest}}
+  end
+
+  # timestamp 32: 4 bytes (32-bit unsigned integer seconds)
+  defp decode_timestamp(<<unix_seconds::unsigned-32>>) do
+    gregorian_seconds = unix_seconds + @epoch_offset
+    erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
+    NaiveDateTime.from_erl!(erlang_datetime)
+  end
+
+  # timestamp 64: 8 bytes (30-bit nanoseconds + 34-bit seconds)
+  defp decode_timestamp(<<data::unsigned-64>>) do
+    nanoseconds = :erlang.bsr(data, 34)
+    unix_seconds = :erlang.band(data, 0x00000003_FFFFFFFF)
+    gregorian_seconds = unix_seconds + @epoch_offset
+    erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
+    base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
+
+    if nanoseconds > 0 do
+      NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
+    else
+      base_datetime
+    end
+  end
+
+  # timestamp 96: 12 bytes (32-bit nanoseconds + 64-bit seconds)
+  defp decode_timestamp(<<nanoseconds::unsigned-32, unix_seconds::signed-64>>) do
+    gregorian_seconds = unix_seconds + @epoch_offset
+    erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
+    base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
+
+    if nanoseconds > 0 do
+      NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
+    else
+      base_datetime
+    end
+  end
+
   defp check_byte_size(size, max_size) when size > max_size do
     throw({:error, {:max_byte_size_exceeded, max_size}})
   end
@@ -178,4 +246,5 @@ defmodule Msgpack.Decoder do
   end
 
   defp check_depth(_depth, _max_depth), do: :ok
+
 end

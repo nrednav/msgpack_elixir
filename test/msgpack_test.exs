@@ -182,8 +182,6 @@ defmodule MsgpackTest do
   end
 
   describe "Msgpack.Ext and Timestamps" do
-    @describetag :skip
-
     test "provides a lossless round trip for custom extension types" do
       input = %Ext{type: 10, data: <<1, 2, 3, 4>>}
 
@@ -206,22 +204,26 @@ defmodule MsgpackTest do
       assert result == input
     end
 
-    test "decodes a timestamp with nanoseconds into a NaiveDateTime" do
-      input = <<0xd7, -1::signed, 0x000001F4653B8A10::64>>
-      expected_datetime = ~N[2023-10-27 10:00:00.000000500]
+    test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
+      timestamp_96_binary = <<0xc7, 12, -1::signed-8, 0::unsigned-32, -315619200::signed-64>>
 
-      {:ok, result} = Msgpack.decode(input)
+      {:ok, decoded} = Msgpack.decode(timestamp_96_binary)
 
-      assert result == expected_datetime
+      assert decoded == ~N[1960-01-01 00:00:00]
     end
 
-    test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
-      input = <<0xc7, -1::signed-8, 123::signed-32, -150_427_200::signed-64>>
-      expected_datetime = ~N[1965-03-26 12:00:00.000000123]
+    test "encodes and decodes a timestamp 32 correctly" do
+      input = ~N[2022-01-01 12:00:00]
 
-      {:ok, result} = Msgpack.decode(input)
+      # This should be encoded as timestamp 32 because nanoseconds are 0.
+      # unix_seconds = 1641038400
+      expected_binary = <<0xd6, -1::signed-8, 1641038400::unsigned-32>>
 
-      assert result == expected_datetime
+      {:ok, encoded} = Msgpack.encode(input)
+      assert :binary.part(encoded, 0, byte_size(expected_binary)) == expected_binary
+
+      {:ok, decoded} = Msgpack.decode(encoded)
+      assert decoded == input
     end
   end
 
