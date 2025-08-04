@@ -282,12 +282,8 @@ defmodule MsgpackTest do
   end
 
   describe "Edge Case Data Types" do
-    @describetag :skip
-
     test "provides a lossless round trip for Infinity" do
-      input = 1.0 / 0.0
-
-      assert Float.is_infinite(input)
+      input = <<0x7FF0000000000000::float-64>>
 
       result =
         input
@@ -298,9 +294,7 @@ defmodule MsgpackTest do
     end
 
     test "provides a lossless round trip for negative Infinity" do
-      input = -1.0 / 0.0
-
-      assert Float.is_infinite(input)
+      input = <<0xFFF0000000000000::float-64>>
 
       result =
         input
@@ -311,16 +305,14 @@ defmodule MsgpackTest do
     end
 
     test "provides a lossless round trip for NaN" do
-      input = 0.0 / 0.0
-
-      assert Float.is_nan(input)
+      input = <<0x7FF8000000000001::float-64>>
 
       result =
         input
         |> Msgpack.encode!()
         |> Msgpack.decode!()
 
-      assert Float.is_nan(result)
+      assert result == input
     end
   end
 
