@@ -164,6 +164,14 @@ Run the test suite:
 mix test
 ```
 
+### Benchmark
+
+Run the benchmarks:
+
+```bash
+mix run bench/run.exs
+```
+
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/).
