@@ -1,18 +1,18 @@
 defmodule MsgpackElixir.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "1.0.0"
   @source_url "https://github.com/nrednav/msgpack_elixir"
 
   def project do
     [
       app: :msgpack_elixir,
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
       aliases: aliases(),
-      description: "An implementation of MessagePack for Elixir.",
+      description: "A MessagePack serialization library for Elixir.",
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env())
     ]
@@ -30,7 +30,9 @@ defmodule MsgpackElixir.MixProject do
     [
       {:telemetry, "~> 1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.30", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.30", only: :dev, runtime: false},
+      {:stream_data, "~> 1.0", only: :test},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 
@@ -41,11 +43,13 @@ defmodule MsgpackElixir.MixProject do
   end
 
   defp package do
-    maintainers: ["Vandern Rodrigues"]
-    licenses: ["MIT"],
-    links: %{
-      "GitHub" => @source_url,
-      "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"
-    }
+    [
+      maintainers: ["Vandern Rodrigues"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"
+      }
+    ]
   end
 end

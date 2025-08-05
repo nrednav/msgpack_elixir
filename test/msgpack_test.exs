@@ -1,0 +1,347 @@
+defmodule MsgpackTest do
+  use ExUnit.Case, async: true
+  use ExUnitProperties
+
+  require StreamData
+
+  alias Msgpack
+  alias Msgpack.Ext
+
+  describe "encode/2" do
+    test "successfully encodes a map with lists and atoms" do
+      assert_encode(%{"tags" => [:a]}, <<0x81, 0xA4, "tags", 0x91, 0xA1, "a">>)
+    end
+
+    test "successfully encodes a tuple as an array" do
+      assert_encode({1, true, "hello"}, <<0x93, 1, 0xC3, 0xA5, "hello">>)
+    end
+
+    test "successfully encodes a map with non-string keys" do
+      input = %{
+        1 => "integer_key",
+        true => "boolean_key",
+        nil => "nil_key"
+      }
+
+      assert input |> Msgpack.encode!() |> Msgpack.decode!() == input
+    end
+
+    test "returns an error tuple when trying to encode an unsupported type like a PID" do
+      input = self()
+      assert_encode_error(input, {:unsupported_type, input})
+    end
+
+    test "returns an error tuple when trying to encode a Reference" do
+      input = make_ref()
+      assert_encode_error(input, {:unsupported_type, input})
+    end
+
+    test "with `atoms: :string` (default) successfully encodes atoms" do
+      assert_encode([:foo], <<0x91, 0xA3, "foo">>)
+    end
+
+    test "with `atoms: :error` returns an error for atoms" do
+      assert_encode_error([:foo], {:unsupported_atom, :foo}, atoms: :error)
+    end
+
+    test "with :string_validation option handles binaries correctly" do
+      invalid_utf8_binary = <<255, "hello">>
+
+      assert Msgpack.encode(invalid_utf8_binary) ==
+        {:ok, <<0xC4, 6, 255, "hello">>}
+
+      # With validation disabled, it should be encoded as a `fixstr` (0xA6),
+      # even though it's not valid UTF-8. This confirms the option is working.
+      assert Msgpack.encode(invalid_utf8_binary, string_validation: false) ==
+               {:ok, <<0xA6, 255, "hello">>}
+    end
+
+    test "returns an error for integers outside the specification's range" do
+      large_int = 18_446_744_073_709_551_616
+      assert_encode_error(large_int, {:unsupported_type, large_int})
+
+      small_int = -9_223_372_036_854_775_809
+      assert_encode_error(small_int, {:unsupported_type, small_int})
+    end
+
+    test "encodes floats using the smallest possible format" do
+      assert_encode(1.5, <<0xCA, 1.5::float-32>>)
+      assert_encode(1.123456789, <<0xCB, 1.123456789::float-64>>)
+    end
+
+    test "chooses the correct string format at the 31/32 byte boundary" do
+      string_31 = String.duplicate("a", 31)
+      assert_encode(string_31, <<0xBF, string_31::binary>>)
+
+      string_32 = String.duplicate("a", 32)
+      assert_encode(string_32, <<0xD9, 32, string_32::binary>>)
+    end
+  end
+
+  describe "decode/2" do
+    test "successfully decodes a binary representing an array of an integer and a string" do
+      assert_decode(<<0x92, 1, 0xA5, "hello">>, [1, "hello"])
+    end
+
+    test "successfully decodes a binary representing a map" do
+      assert_decode(<<0x81, 0xA3, "foo", 0xA3, "bar">>, %{"foo" => "bar"})
+    end
+
+    test "returns a malformed binary error for incomplete data" do
+      assert_decode_error(<<0x92, 1>>, :unexpected_eof)
+    end
+
+    test "returns a malformed binary error for an invalid format byte" do
+      assert_decode_error(<<0xC1>>, {:unknown_prefix, 193})
+    end
+
+    test "successfully decodes a float 32 binary" do
+      assert_decode(<<0xCA, 0x3FC00000::32>>, 1.5)
+    end
+
+    test "respects the :max_depth option" do
+      input = <<0x91, 0x91, 0x91, 1>>
+      expected_term = [[[1]]]
+
+      assert_decode(input, expected_term, max_depth: 3)
+      assert_decode(input, expected_term, max_depth: 4)
+      assert_decode_error(input, {:max_depth_reached, 2}, max_depth: 2)
+    end
+
+    test "returns an error when a declared string size exceeds :max_byte_size" do
+      input = <<0xDB, 0xFFFFFFFF::32>>
+      limit = 1_000_000
+
+      assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
+    end
+
+    test "returns an error when a declared array size exceeds :max_byte_size" do
+      input = <<0xDD, 0xFFFFFFFF::32>>
+      limit = 1_000_000
+
+      assert_decode_error(input, {:max_byte_size_exceeded, limit}, max_byte_size: limit)
+    end
+
+    test "successfully decodes data within byte size limit" do
+      input = <<0xA5, "hello">>
+      limit = 10
+
+      assert_decode(input, "hello", max_byte_size: limit)
+    end
+  end
+
+  describe "encode!/2" do
+    test "returns the binary on successful encoding" do
+      input = [1, 2, 3]
+      expected_binary = <<0x93, 1, 2, 3>>
+
+      assert Msgpack.encode!(input) == expected_binary
+    end
+
+    test "raises an error on failure" do
+      input = self()
+
+      assert_raise Msgpack.EncodeError, fn ->
+        Msgpack.encode!(input)
+      end
+    end
+  end
+
+  describe "decode!/2" do
+    test "returns the binary on successful encoding" do
+      input = <<0x93, 1, 2, 3>>
+      expected_term = [1, 2, 3]
+
+      assert Msgpack.decode!(input) == expected_term
+    end
+
+    test "raises an error on failure" do
+      input = <<0x92, 1>>
+
+      assert_raise Msgpack.DecodeError, fn ->
+        Msgpack.decode!(input)
+      end
+    end
+  end
+
+  describe "Property Tests" do
+    defp supported_term_generator do
+      StreamData.sized(&do_supported_term_generator/1)
+    end
+
+    defp do_supported_term_generator(size) do
+      leaf_generators = [
+        StreamData.constant(nil),
+        StreamData.boolean(),
+        StreamData.integer(),
+        StreamData.float(),
+        StreamData.string(:alphanumeric, max_length: 128),
+        StreamData.binary(max_length: 128),
+        StreamData.atom(:alphanumeric) |> StreamData.map(&Atom.to_string/1)
+      ]
+
+      leaf_generator = StreamData.one_of(leaf_generators)
+
+      if size == 0 do
+        leaf_generator
+      else
+        inner_generator = do_supported_term_generator(size - 1)
+
+        container_generators = [
+          StreamData.list_of(inner_generator, max_length: 3),
+          StreamData.map_of(
+            StreamData.string(:alphanumeric, max_length: 64),
+            inner_generator,
+            max_length: 3
+          ),
+          StreamData.tuple({inner_generator})
+        ]
+
+        StreamData.one_of([leaf_generator | container_generators])
+      end
+    end
+
+    property "encode! |> decode! is a lossless round trip for supported types" do
+      check all(term <- supported_term_generator(), max_run: 500, max_size: 30) do
+        expected = transform_tuples_to_lists(term)
+
+        result =
+          term
+          |> Msgpack.encode!()
+          |> Msgpack.decode!()
+
+        # Special case for floats due to potential precision issues
+        if is_float(expected) and is_float(result) do
+          assert_in_delta expected, result, 0.000001
+        else
+          assert result == expected
+        end
+      end
+    end
+  end
+
+  describe "Extensions & Timestamps" do
+    test "provides a lossless round trip for custom extension types" do
+      input = %Ext{type: 10, data: <<1, 2, 3, 4>>}
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
+      assert result == input
+    end
+
+    test "provides a lossless round trip for NaiveDateTime via the Timestamp extension" do
+      input = ~N[2025-08-02 10:00:00.123456]
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
+      assert result == input
+    end
+
+    test "provides a lossless round trip for a standard DateTime struct" do
+      input = DateTime.from_naive!(~N[2025-01-01 10:00:00], "Etc/UTC")
+
+      expected = ~N[2025-01-01 10:00:00]
+
+      result =
+        input
+        |> Msgpack.encode!()
+        |> Msgpack.decode!()
+
+      assert result == expected
+    end
+
+    test "decodes a timestamp 96 (pre-epoch) into a NaiveDateTime" do
+      timestamp_96_binary = <<0xC7, 12, -1::signed-8, 0::unsigned-32, -315_619_200::signed-64>>
+      {:ok, decoded} = Msgpack.decode(timestamp_96_binary)
+      assert decoded == ~N[1960-01-01 00:00:00]
+    end
+
+    test "encodes and decodes a timestamp 32 correctly" do
+      input = ~N[2022-01-01 12:00:00]
+      expected_binary = <<0xD6, -1::signed-8, 1_641_038_400::unsigned-32>>
+
+      assert_encode(input, expected_binary)
+      assert_decode(expected_binary, input)
+    end
+
+    test "switches from timestamp 32 to 64 at the correct boundary" do
+      t32_date = ~N[2106-02-07 06:28:15]
+      {:ok, t32_binary} = Msgpack.encode(t32_date)
+      assert t32_binary == <<0xD6, -1::signed-8, 4294967295::unsigned-32>>
+
+      # Adding one second exceeds the range, requiring timestamp 64.
+      # It should be encoded as a timestamp 64 with prefix 0xD7.
+      t64_date = ~N[2106-02-07 06:28:16]
+      {:ok, t64_binary} = Msgpack.encode(t64_date)
+      assert :binary.part(t64_binary, 0, 2) == <<0xD7, -1::signed-8>>
+    end
+
+    test "returns an error for a timestamp with invalid nanoseconds" do
+      # This represents a timestamp 64 with 1,000,000,000 nanoseconds, which is invalid.
+      # The spec requires the nanosecond part to be less than 1 billion.
+      invalid_nanoseconds_payload = Bitwise.bsl(1_000_000_000, 34)
+      invalid_timestamp_binary = <<0xD7, -1::signed-8, invalid_nanoseconds_payload::unsigned-64>>
+
+      assert_decode_error(invalid_timestamp_binary, :invalid_timestamp)
+    end
+  end
+
+  describe "Edge Case Data Types" do
+    test "provides a lossless round trip for Infinity" do
+      input = <<0x7FF0000000000000::float-64>>
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
+      assert result == input
+    end
+
+    test "provides a lossless round trip for negative Infinity" do
+      input = <<0xFFF0000000000000::float-64>>
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
+      assert result == input
+    end
+
+    test "provides a lossless round trip for NaN" do
+      input = <<0x7FF8000000000001::float-64>>
+      result = input |> Msgpack.encode!() |> Msgpack.decode!()
+      assert result == input
+    end
+
+    test "provides a lossless round trip for empty collections" do
+      assert "" |> Msgpack.encode!() |> Msgpack.decode!() == ""
+      assert <<>> |> Msgpack.encode!() |> Msgpack.decode!() == <<>>
+      assert [] |> Msgpack.encode!() |> Msgpack.decode!() == []
+      assert %{} |> Msgpack.encode!() |> Msgpack.decode!() == %{}
+    end
+  end
+
+  # ==== Helpers ====
+
+  defp assert_encode(input, expected_binary) do
+    assert Msgpack.encode(input) == {:ok, expected_binary}
+  end
+
+  defp assert_encode_error(input, expected_reason, opts \\ []) do
+    assert Msgpack.encode(input, opts) == {:error, expected_reason}
+  end
+
+  defp assert_decode(input_binary, expected_term, opts \\ []) do
+    assert Msgpack.decode(input_binary, opts) == {:ok, expected_term}
+  end
+
+  defp assert_decode_error(input_binary, expected_reason, opts \\ []) do
+    assert Msgpack.decode(input_binary, opts) == {:error, expected_reason}
+  end
+
+  defp transform_tuples_to_lists(term) do
+    cond do
+      is_tuple(term) ->
+        term |> Tuple.to_list() |> Enum.map(&transform_tuples_to_lists/1)
+
+      is_list(term) ->
+        Enum.map(term, &transform_tuples_to_lists/1)
+
+      is_map(term) ->
+        Map.new(term, fn {key, value} ->
+          {transform_tuples_to_lists(key), transform_tuples_to_lists(value)}
+        end)
+
+      true ->
+        term
+    end
+  end
+end
