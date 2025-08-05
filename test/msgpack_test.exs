@@ -271,6 +271,15 @@ defmodule MsgpackTest do
       {:ok, t64_binary} = Msgpack.encode(t64_date)
       assert :binary.part(t64_binary, 0, 2) == <<0xD7, -1::signed-8>>
     end
+
+    test "returns an error for a timestamp with invalid nanoseconds" do
+      # This represents a timestamp 64 with 1,000,000,000 nanoseconds, which is invalid.
+      # The spec requires the nanosecond part to be less than 1 billion.
+      invalid_nanoseconds_payload = Bitwise.bsl(1_000_000_000, 34)
+      invalid_timestamp_binary = <<0xD7, -1::signed-8, invalid_nanoseconds_payload::unsigned-64>>
+
+      assert_decode_error(invalid_timestamp_binary, :invalid_timestamp)
+    end
   end
 
   describe "Edge Case Data Types" do

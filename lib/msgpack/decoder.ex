@@ -223,28 +223,37 @@ defmodule Msgpack.Decoder do
   # timestamp 64: 8 bytes (30-bit nanoseconds + 34-bit seconds)
   defp decode_timestamp(<<data::unsigned-64>>) do
     nanoseconds = :erlang.bsr(data, 34)
-    unix_seconds = :erlang.band(data, 0x00000003_FFFFFFFF)
-    gregorian_seconds = unix_seconds + @epoch_offset
-    erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
-    base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
 
-    if nanoseconds > 0 do
-      NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
+    if nanoseconds > 999_999_999 do
+      throw({:error, :invalid_timestamp})
     else
-      base_datetime
+      unix_seconds = :erlang.band(data, 0x00000003_FFFFFFFF)
+      gregorian_seconds = unix_seconds + @epoch_offset
+      erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
+      base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
+
+      if nanoseconds > 0 do
+        NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
+      else
+        base_datetime
+      end
     end
   end
 
   # timestamp 96: 12 bytes (32-bit nanoseconds + 64-bit seconds)
   defp decode_timestamp(<<nanoseconds::unsigned-32, unix_seconds::signed-64>>) do
-    gregorian_seconds = unix_seconds + @epoch_offset
-    erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
-    base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
-
-    if nanoseconds > 0 do
-      NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
+    if nanoseconds > 999_999_999 do
+      throw({:error, :invalid_timestamp})
     else
-      base_datetime
+      gregorian_seconds = unix_seconds + @epoch_offset
+      erlang_datetime = :calendar.gregorian_seconds_to_datetime(gregorian_seconds)
+      base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
+
+      if nanoseconds > 0 do
+        NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
+      else
+        base_datetime
+      end
     end
   end
 
