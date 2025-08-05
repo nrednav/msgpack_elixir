@@ -14,6 +14,7 @@ defmodule MsgpackElixir.MixProject do
       aliases: aliases(),
       description: "A MessagePack serialization library for Elixir.",
       package: package(),
+      docs: docs(),
       elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
@@ -50,6 +51,13 @@ defmodule MsgpackElixir.MixProject do
         "GitHub" => @source_url,
         "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"
       }
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Msgpack",
+      extras: ["README.md", "CHANGELOG.md"]
     ]
   end
 end
