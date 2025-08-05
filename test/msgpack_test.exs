@@ -162,6 +162,20 @@ defmodule MsgpackTest do
         Msgpack.decode!(input)
       end
     end
+
+    test "raises an error with a descriptive message" do
+      assert_raise Msgpack.DecodeError, "Unexpected end of file. The MessagePack binary is incomplete.", fn ->
+        Msgpack.decode!(<<0x81, 0xA3, "f">>)
+      end
+
+      assert_raise Msgpack.DecodeError, "Unknown type prefix: 193. The byte `0xC1` is not a valid MessagePack type marker.", fn ->
+        Msgpack.decode!(<<0xC1>>)
+      end
+
+      assert_raise Msgpack.DecodeError, "Maximum nesting depth of 2 reached. This limit can be configured with the `:max_depth` option.", fn ->
+        Msgpack.decode!(<<0x91, 0x91, 0x91, 1>>, max_depth: 2)
+      end
+    end
   end
 
   describe "Property Tests" do
