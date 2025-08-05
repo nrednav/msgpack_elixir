@@ -3,13 +3,21 @@ defmodule Msgpack.Decoder do
   Handles the logic of decoding a MessagePack binary into an Elixir term.
   """
 
+  @default_max_depth 100
+  @default_max_byte_size 10_000_000 # 10MB
+
   # The number of gregorian seconds from year 0 to the Unix epoch. This is a constant.
   @epoch_offset :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
 
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, term()}
   def decode(binary, opts \\ []) do
+    merged_opts =
+      opts
+      |> Keyword.put_new(:max_depth, @default_max_depth)
+      |> Keyword.put_new(:max_byte_size, @default_max_byte_size)
+
     try do
-      case do_decode(binary, opts) do
+      case do_decode(binary, merged_opts) do
         {:ok, {term, <<>>}} ->
           {:ok, term}
 
@@ -156,8 +164,8 @@ defmodule Msgpack.Decoder do
   defp decode_array(binary, size, opts) do
     depth = opts[:depth] || 0
 
-    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
-    if max_size = opts[:max_byte_size], do: check_byte_size(size, max_size)
+    check_depth(depth, opts[:max_depth])
+    check_byte_size(size, opts[:max_byte_size])
 
     new_opts = Keyword.put(opts, :depth, depth + 1)
 
@@ -167,8 +175,8 @@ defmodule Msgpack.Decoder do
   defp decode_map(binary, size, opts) do
     depth = opts[:depth] || 0
 
-    if max_depth = opts[:max_depth], do: check_depth(depth, max_depth)
-    if max_size = opts[:max_byte_size], do: check_byte_size(size * 2, max_size)
+    check_depth(depth, opts[:max_depth])
+    check_byte_size(size * 2, opts[:max_byte_size])
 
     new_opts = Keyword.put(opts, :depth, depth + 1)
 
