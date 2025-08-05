@@ -13,10 +13,10 @@ defmodule Msgpack do
   ### Example
 
   ```elixir
-  iex> data = %{"compact" => true, "schema" => 0}
+  iex> data = %{"id" => 1, "name" => "Elixir"}
   iex> {:ok, encoded} = Msgpack.encode(data)
   iex> Msgpack.decode(encoded)
-  {:ok, %{"compact" => true, "schema" => 0}}
+  {:ok, %{"id" => 1, "name" => "Elixir"}}
   ```
   """
 
@@ -25,14 +25,17 @@ defmodule Msgpack do
   alias Msgpack.EncodeError
   alias Msgpack.DecodeError
 
-  # Encoding errors
   @type error_reason ::
+          # Encoding errors
           {:unsupported_type, term()}
           | {:unsupported_atom, atom()}
           # Decoding errors
           | :unexpected_eof
           | {:unknown_prefix, byte()}
           | {:trailing_bytes, binary()}
+          | {:max_depth_reached, non_neg_integer()}
+          | {:max_byte_size_exceeded, non_neg_integer()}
+          | :invalid_timestamp
 
   @doc """
   Encodes an Elixir term into a MessagePack binary.
