@@ -8,11 +8,11 @@ defmodule MsgpackElixir.MixProject do
     [
       app: :msgpack_elixir,
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      description: "An implementation of MessagePack for Elixir.",
+      description: "A MessagePack serialization library for Elixir.",
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env())
     ]
