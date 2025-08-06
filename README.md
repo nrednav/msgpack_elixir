@@ -2,25 +2,24 @@
 
 [![Hex.pm](https://img.shields.io/hexpm/v/msgpack_elixir.svg)](https://hex.pm/packages/msgpack_elixir)
 
-A [MessagePack](https://msgpack.org/) serialization library for Elixir.
+An implementation of the [MessagePack](https://msgpack.org/) serialization
+format for Elixir.
+
+It provides functions for encoding and decoding Elixir terms and supports the
+full MessagePack specification, including the Timestamp and custom Extension
+types.
 
 ## Features
 
-- **Full Specification Compliance:** Adheres to the MessagePack specification to
-  ensure compatibility with other MessagePack implementations
-  - Includes support for types such as `Booleans`, `Integers`, `Floats`, `Tuples`,
-    `Lists`, `Maps`, `Strings`, `Binaries`, `Extensions`, and `Timestamps`
-  - Encodes and decodes Elixir's `DateTime` and `NaiveDateTime` structs using
-    the MessagePack `Timestamp` extension
-- **Performant Encoding:** Implements efficient encoding for collections and
-  provides a `:string_validation` option to bypass UTF-8 validation in
-  performance-sensitive applications
-- **Exception-raising Variants:** Includes bang (`!`) variants like `encode!/2`
-  and `decode!/2` for contexts where raising an exception is preferred over
-  error tuples
-- **Telemetry Integration:** Emits standard `:telemetry` events for all encode
-  and decode operations, allowing for easy integration into monitoring and
-  observability tools
+- **Specification Compliance:** Implements the complete MessagePack type system.
+- **Elixir Struct Support:** Encodes and decodes `DateTime` and `NaiveDateTime`
+  structs via the Timestamp extension type.
+- **Configurable Validation:** Provides an option to bypass UTF-8 validation on
+  strings for performance-critical paths.
+- **Resource Limiting:** Includes configurable `:max_depth` and `:max_byte_size`
+  limits to mitigate resource exhaustion from malformed or malicious payloads.
+- **Telemetry Integration:** Emits standard `:telemetry` events for integration
+  with monitoring tools.
 
 ## Installation
 
@@ -34,98 +33,28 @@ end
 
 Then, run `mix deps.get`.
 
-## Usage
-
-### Basic Operations
-
-The library returns `{:ok, value}` tuples for successful operations and
-`{:error, reason}` tuples for failures.
+## Quick Start
 
 ```elixir
-# Encode a map
-iex> data = %{"id" => 1, "name" => "Elixir"}
+# Encode a map. Atom keys are converted to strings by default.
+iex> data = %{id: 1, name: "Elixir"}
 iex> {:ok, encoded} = Msgpack.encode(data)
 <<130, 162, 105, 100, 1, 164, 110, 97, 109, 101, 166, 69, 108, 105, 120, 105, 114>>
 
-# Decode a binary
+# Decode a binary.
 iex> Msgpack.decode(encoded)
 {:ok, %{"id" => 1, "name" => "Elixir"}}
+
+# Use the exception-raising variants for exceptional failure cases.
+iex> Msgpack.decode!(<<0xC1>>)
+** (Msgpack.DecodeError) Unknown type prefix: 193. The byte `0xC1` is not a valid MessagePack type marker.
 ```
 
-### Exception-raising Operations
+## Full Documentation
 
-If you prefer an exception to be raised on failure, use the bang (`!`) variants.
-
-```elixir
-iex> encoded = Msgpack.encode!(%{id: 1})
-<<129, 162, 105, 100, 1>>
-
-iex> Msgpack.decode!(<<192, 42>>)
-** (Msgpack.DecodeError) Failed to decode MessagePack binary. Reason = {:trailing_bytes, <<42>>}
-```
-
-## Options
-
-The following options can be passed as a second argument to the `encode` and
-`decode` functions.
-
-### For `encode/2`
-
-- `:atoms`
-  - Controls how atoms are encoded.
-  - `:string` (default) - Encodes atoms as MessagePack strings
-  - `:error` - Returns an `{:error, {:unsupported_atom, atom}}` tuple if an atom
-    is encountered
-- `:string_validation`
-  - Controls whether to perform UTF-8 validation on binaries
-  - `true` (default) - Validates binaries; encodes as `str` type if valid UTF-8,
-    `bin` type otherwise
-  - `false` - Skips validation and encodes all binaries as the `str` type.
-    Improves performance but should only be used if you are certain your data is
-    valid
-
-### For `decode/2`
-
-- `:max_depth`
-  - Sets a limit on the nesting level of arrays and maps to prevent stack
-    exhaustion attacks
-  - Defaults to `100`
-- `:max_byte_size`
-  - Sets a limit on the declared byte size of any single string, binary, array,
-    or map to prevent memory exhaustion attacks
-  - Defaults to `10_000_000` (10MB)
-
-## Telemetry
-
-The library emits `:telemetry` events which can be used for monitoring or
-logging.
-
-- `[:msgpack, :encode]` - Dispatched when `Msgpack.encode/2` is called
-- `[:msgpack, :decode]` - Dispatched when `Msgpack.decode/2` is called
-
-Example of attaching a logger:
-
-```elixir
-defmodule MyTelemetryHandler do
-  require Logger
-
-  def attach do
-    :telemetry.attach(
-      "msgpack-logger",
-      [:msgpack, :encode],
-      &__MODULE__.handle_event/4,
-      nil
-    )
-  end
-
-  def handle_event(event_name, measurements, metadata, _config) do
-    Logger.info("Telemetry Event: #{inspect(event_name)}",
-      measurements: measurements,
-      metadata: metadata
-    )
-  end
-end
-```
+For detailed information on all features, options, and functions, see the [full
+documentation on HexDocs](https://hexdocs.pm/msgpack_elixir/Msgpack.html), which
+contains a complete API reference for all public modules and functions.
 
 ## Development
 
