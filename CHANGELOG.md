@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.0.1] - 2025-08-06
+
+### Added
+
+- Added a dedicated how-to guide for using telemetry
+
+### Changed
+
+- Exception messages were expanded to include specific details about the cause
+  of the error and, where applicable, configuration options for resolution.
+- Updated all documentation (@moduledoc, @doc, readme, etc.)
+
 ## [v1.0.0] - 2025-08-02
 
 ### Added
