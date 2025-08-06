@@ -1,7 +1,7 @@
 defmodule MsgpackElixir.MixProject do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "1.0.1"
   @source_url "https://github.com/nrednav/msgpack_elixir"
 
   def project do
