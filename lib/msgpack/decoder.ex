@@ -3,18 +3,12 @@ defmodule Msgpack.Decoder do
   Handles the logic of decoding a MessagePack binary into an Elixir term.
   """
 
-  @default_max_depth 100
-  @default_max_byte_size 10_000_000 # 10MB
-
   # The number of gregorian seconds from year 0 to the Unix epoch. This is a constant.
   @epoch_offset :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
 
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, term()}
   def decode(binary, opts \\ []) do
-    merged_opts =
-      opts
-      |> Keyword.put_new(:max_depth, @default_max_depth)
-      |> Keyword.put_new(:max_byte_size, @default_max_byte_size)
+    merged_opts = Keyword.merge(default_options(), opts)
 
     try do
       case do_decode(binary, merged_opts) do
@@ -31,6 +25,16 @@ defmodule Msgpack.Decoder do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @doc """
+  Returns a keyword list of the default options for the decoder.
+  """
+  def default_options() do
+    [
+      max_depth: 100,
+      max_byte_size: 10_000_000 # 10MB
+    ]
   end
 
   # ==== Nil ====
