@@ -3,7 +3,7 @@ defmodule Msgpack.StreamDecoder do
   alias Msgpack.Decoder.Internal
 
   @doc """
-  Decodes a stream of MessagePack binaries into a stream of Elixir terms
+  Decodes a stream of MessagePack binaries into a stream of Elixir terms.
   """
   def decode(enumerable, opts \\ []) do
     merged_opts = Keyword.merge(Decoder.default_options(), opts)
