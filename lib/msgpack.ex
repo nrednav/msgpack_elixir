@@ -49,6 +49,8 @@ defmodule Msgpack do
 
   alias Msgpack.Encoder
   alias Msgpack.Decoder
+  alias Msgpack.StreamEncoder
+  alias Msgpack.StreamDecoder
   alias Msgpack.EncodeError
   alias Msgpack.DecodeError
 
@@ -313,5 +315,13 @@ defmodule Msgpack do
       {:error, reason} ->
         raise DecodeError, reason: reason
     end
+  end
+
+  def encode_stream(enumerable, opts \\ []) do
+    StreamEncoder.encode(enumerable, opts)
+  end
+
+  def decode_stream(enumerable, opts \\ []) do
+    StreamDecoder.decode(enumerable, opts)
   end
 end
