@@ -22,4 +22,15 @@ defmodule Msgpack.StreamDecoderTest do
 
     assert result == terms
   end
+
+  test "returns an error when the stream ends with incomplete data" do
+    binary = Msgpack.encode!("returns an error when the stream ends with incomplete data")
+    incomplete_binary = :binary.part(binary, 0, 4)
+    input_stream = [incomplete_binary]
+    expected_result = [{:error, :unexpected_eof}]
+
+    result = StreamDecoder.decode(input_stream) |> Enum.to_list()
+
+    assert result == expected_result
+  end
 end

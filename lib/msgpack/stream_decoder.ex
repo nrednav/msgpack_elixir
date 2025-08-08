@@ -9,37 +9,38 @@ defmodule Msgpack.StreamDecoder do
     merged_opts = Keyword.merge(Decoder.default_options(), opts)
 
     initial_acc = %{
+      enum: enumerable,
       buffer: <<>>,
       opts: merged_opts
     }
 
-    Stream.transform(enumerable, initial_acc, &process_chunk/2)
+    Stream.unfold(initial_acc, &decode_one_or_fetch/1)
   end
 
-  defp process_chunk(chunk, acc) do
-    buffer = acc.buffer <> chunk
-    opts = acc.opts
-
-    {decoded_terms, leftover_buffer} = decode_from_buffer(buffer, opts, [])
-
-    {decoded_terms, %{acc | buffer: leftover_buffer}}
-  end
-
-  defp decode_from_buffer(buffer, opts, decoded_acc) do
+  defp decode_one_or_fetch(state) do
     try do
-      case Internal.decode(buffer, opts) do
+      case Internal.decode(state.buffer, state.opts) do
         {:ok, {term, rest}} ->
-          decode_from_buffer(rest, opts, [term | decoded_acc])
+          {term, %{state | buffer: rest}}
 
         {:error, :unexpected_eof} ->
-          {Enum.reverse(decoded_acc), buffer}
+          case Enum.fetch(state.enum, 0) do
+            {:ok, chunk} ->
+              new_buffer = state.buffer <> chunk
+              remaining_enum = Stream.drop(state.enum, 1)
+              decode_one_or_fetch(%{state | buffer: new_buffer, enum: remaining_enum})
 
-        {:error, reason} ->
-          {Enum.reverse(decoded_acc, [{:error, reason}]), <<>>}
+            :error ->
+              if byte_size(state.buffer) > 0 do
+                {{:error, :unexpected_eof}, %{state | buffer: <<>>}}
+              else
+                nil
+              end
+          end
       end
     catch
       {:error, reason} ->
-        {Enum.reverse(decoded_acc, [{:error, reason}]), <<>>}
+        {{:error, reason}, %{state | buffer: <<>>}}
     end
   end
 end
