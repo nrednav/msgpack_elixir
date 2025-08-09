@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a new Streaming API that processes data in chunks, reducing peak memory
+  usage when handling large datasets or network streams
+  - Introduced `Msgpack.encode_stream/2` to lazily encode a stream of Elixir
+    terms one by one
+  - Introduced `Msgpack.decode_stream/2` to lazily decode a stream of
+    MessagePack objects, capable of handling data that arrives in multiple
+    chunks
 - Added CI workflow to run tests against supported Elixir versions
 
 ### Changed
