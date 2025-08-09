@@ -19,7 +19,7 @@ jobs:
             otp: '28.0'
             os: ubuntu-latest
           - elixir: '1.7.0'
-            otp: '21.0'
+            otp: '22.0'
             os: windows-2022
 
     steps:
