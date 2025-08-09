@@ -62,7 +62,10 @@ This section explains how to setup the project locally for development.
 
 ### Dependencies
 
-- Elixir `~> 1.7` (OTP 21+)
+- Elixir `~> 1.12` (OTP 24+)
+  - See [Compatibility and
+    deprecations](https://hexdocs.pm/elixir/1.18.4/compatibility-and-deprecations.html)
+    for more information
 
 ### Get the Source
 
