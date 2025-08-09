@@ -317,10 +317,59 @@ defmodule Msgpack do
     end
   end
 
+  @doc """
+  Encodes a stream of Elixir terms into a stream of MessagePack binaries.
+
+  Each term in the input enumerable is encoded individually. The output stream
+  will contain `{:ok, binary}` tuples for successful encodings or `{:error,
+  reason}` tuples for failures.
+
+  This function delegates to `Msgpack.StreamEncoder.encode/2`.
+
+  ## Options
+
+  Accepts the same options as `Msgpack.encode/2`.
+
+  ## Examples
+
+  ```elixir
+  iex> terms = [1, "elixir", :world]
+  iex> Msgpack.encode_stream(terms, atoms: :string) |> Enum.to_list()
+  [
+    {:ok, <<1>>},
+    {:ok, <<166, 101, 108, 105, 120, 105, 114>>},
+    {:ok, <<165, 119, 111, 114, 108, 100>>}
+  ]
+  ```
+  """
   def encode_stream(enumerable, opts \\ []) do
     StreamEncoder.encode(enumerable, opts)
   end
 
+  @doc """
+  Decodes a stream of MessagePack binaries into a stream of Elixir terms.
+
+  This function provides a streaming, lazy interface for decoding, making it
+  suitable for handling large datasets that do not fit into memory.
+
+  It delegates to `Msgpack.StreamDecoder.decode/2`.
+
+  For more detailed information on behavior, see the `Msgpack.StreamDecoder`
+  module documentation.
+
+  ## Options
+
+  Accepts the same options as `Msgpack.decode/2`.
+
+  ## Examples
+
+  ```elixir
+  iex> objects = [1, "elixir", true]
+  iex> stream = Enum.map(objects, &Msgpack.encode!/1)
+  iex> Msgpack.decode_stream(stream) |> Enum.to_list()
+  [1, "elixir", true]
+  ```
+  """
   def decode_stream(enumerable, opts \\ []) do
     StreamDecoder.decode(enumerable, opts)
   end
