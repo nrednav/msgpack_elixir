@@ -7,9 +7,21 @@ on:
       - dev
 
 jobs:
-  test-latest:
-    name: Test (v1.18.4, OTP-28)
-    runs-on: ubuntu-latest
+  test:
+    name: Test (Elixir ${{ matrix.elixir }}, OTP ${{ matrix.otp }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: '1.18.4'
+            otp: '28.0'
+            os: ubuntu-latest
+          - elixir: '1.7.0'
+            otp: '21.0'
+            os: windows-2022
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -17,27 +29,9 @@ jobs:
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18.4'
-          otp-version: '28.0'
-
-      - name: Install Dependencies
-        run: mix deps.get
-
-      - name: Run Tests
-        run: mix test
-
-  test-oldest:
-    name: Test (v1.7.0, OTP-21)
-    runs-on: windows-2022
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.7.0'
-          otp-version: '21.0'
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+          version-type: 'strict'
 
       - name: Install Dependencies
         run: mix deps.get
