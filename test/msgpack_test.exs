@@ -323,6 +323,38 @@ defmodule MsgpackTest do
     end
   end
 
+  describe "Streaming" do
+    test "provides a lossless round trip for streaming encode and decode" do
+      terms = [1, "elixir", true, %{"key" => "value"}]
+
+      result =
+        terms
+        |> Msgpack.encode_stream()
+        |> Stream.map(fn {:ok, binary} -> binary end)
+        |> Msgpack.decode_stream()
+        |> Enum.to_list()
+
+      assert result == terms
+    end
+
+    test "encode_stream handles unencodable terms gracefully" do
+      terms = [1, :elixir, 4]
+
+      expected = [
+        {:ok, <<1>>},
+        {:ok, <<166, 101, 108, 105, 120, 105, 114>>},
+        {:ok, <<4>>},
+      ]
+
+      result =
+        terms
+        |> Msgpack.encode_stream()
+        |> Enum.to_list()
+
+      assert result == expected
+    end
+  end
+
   # ==== Helpers ====
 
   defp assert_encode(input, expected_binary) do

@@ -1,0 +1,38 @@
+name: Elixir CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  test:
+    name: Test (Elixir ${{ matrix.elixir }}, OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: '1.18.4'
+            otp: '28.0'
+            version-type: 'strict'
+          - elixir: '1.12.0'
+            otp: '24.x'
+            version-type: 'loose'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+          version-type: ${{ matrix.version-type }}
+
+      - name: Install Dependencies
+        run: mix deps.get
+
+      - name: Run Tests
+        run: mix test

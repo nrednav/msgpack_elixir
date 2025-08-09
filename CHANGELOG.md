@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.1.0] - 2025-08-09
+
+### Added
+
+- Added a new Streaming API that processes data in chunks, reducing peak memory
+  usage when handling large datasets or network streams
+  - Introduced `Msgpack.encode_stream/2` to lazily encode a stream of Elixir
+    terms one by one
+  - Introduced `Msgpack.decode_stream/2` to lazily decode a stream of
+    MessagePack objects, capable of handling data that arrives in multiple
+    chunks
+- Added CI workflow to run tests against supported Elixir versions
+
+### Changed
+
+- Updated minimum supported Elixir version to v1.12
+  - While the library may work with older versions, StreamData supports a
+    minimum of v1.12, so it would be missing the property tests
+
+### Fixed
+
+- Updated timestamp decoding to be backwards-compatible with Elixir v1.12
+
 ## [v1.0.2] - 2025-08-06
 
 ### Fixed

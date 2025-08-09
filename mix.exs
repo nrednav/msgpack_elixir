@@ -1,14 +1,14 @@
 defmodule MsgpackElixir.MixProject do
   use Mix.Project
 
-  @version "1.0.2"
+  @version "1.1.0"
   @source_url "https://github.com/nrednav/msgpack_elixir"
 
   def project do
     [
       app: :msgpack_elixir,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),

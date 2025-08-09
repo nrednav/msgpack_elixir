@@ -20,6 +20,9 @@ types.
   limits to mitigate resource exhaustion from malformed or malicious payloads.
 - **Telemetry Integration:** Emits standard `:telemetry` events for integration
   with monitoring tools.
+- **Streaming API:** Process large collections or continuous data streams with
+  low memory overhead using `Msgpack.encode_stream/2` and
+  `Msgpack.decode_stream/2`.
 
 ## Installation
 
@@ -50,6 +53,27 @@ iex> Msgpack.decode!(<<0xC1>>)
 ** (Msgpack.DecodeError) Unknown type prefix: 193. The byte `0xC1` is not a valid MessagePack type marker.
 ```
 
+### Streaming Large Collections
+
+For datasets that may not fit in memory, you can use the streaming API, which
+processes one term at a time.
+
+```elixir
+# Create a lazy stream of terms to be encoded.
+iex> terms = Stream.cycle([1, "elixir", true])
+
+# The output is a lazy stream of encoded binaries.
+iex> encoded_stream = Msgpack.encode_stream(terms)
+
+# The stream is only consumed when you enumerate it.
+iex> encoded_stream |> Stream.take(3) |> Enum.to_list()
+[
+  {:ok, <<1>>},
+  {:ok, <<166, 101, 108, 105, 120, 105, 114>>},
+  {:ok, <<195>>}
+]
+```
+
 ## Full Documentation
 
 For detailed information on all features, options, and functions, see the [full
@@ -62,7 +86,10 @@ This section explains how to setup the project locally for development.
 
 ### Dependencies
 
-- Elixir `~> 1.7` (OTP 21+)
+- Elixir `~> 1.12` (OTP 24+)
+  - See [Compatibility and
+    deprecations](https://hexdocs.pm/elixir/1.18.4/compatibility-and-deprecations.html)
+    for more information
 
 ### Get the Source
 
