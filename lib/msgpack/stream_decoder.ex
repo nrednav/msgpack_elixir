@@ -23,6 +23,12 @@ defmodule Msgpack.StreamDecoder do
   alias Msgpack.Decoder
   alias Msgpack.Decoder.Internal
 
+  @typedoc "A stream that yields decoded Elixir terms."
+  @type t :: Stream.t()
+
+  @typedoc "Options passed to the decoder."
+  @type opts_t :: keyword()
+
   @doc """
   Lazily decodes an enumerable of MessagePack binaries into a stream of Elixir
   terms.
@@ -70,6 +76,7 @@ defmodule Msgpack.StreamDecoder do
   [{:error, :unexpected_eof}]
   ```
   """
+  @spec decode(Enumerable.t(binary()), opts_t()) :: t()
   def decode(enumerable, opts \\ []) do
     start_fun = fn ->
       merged_opts = Keyword.merge(Decoder.default_opts(), opts)
@@ -82,6 +89,8 @@ defmodule Msgpack.StreamDecoder do
     Stream.transform(stream_with_eof, start_fun.(), transform_fun)
   end
 
+  @doc false
+  @spec transform_chunk(binary() | :eof, {binary(), opts_t()}) :: {list(), {binary(), opts_t() | nil}}
   defp transform_chunk(:eof, {<<>>, _opts}) do
     {[], {<<>>, nil}}
   end
@@ -95,6 +104,8 @@ defmodule Msgpack.StreamDecoder do
     {decoded_terms, {leftover_buffer, opts}}
   end
 
+  @doc false
+  @spec do_transform(binary(), opts_t(), list()) :: {list(), binary()}
   defp do_transform(<<>>, _opts, acc) do
     {Enum.reverse(acc), <<>>}
   end

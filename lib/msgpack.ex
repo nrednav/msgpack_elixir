@@ -342,6 +342,7 @@ defmodule Msgpack do
   ]
   ```
   """
+  @spec encode_stream(Enumerable.t(), StreamEncoder.opts_t()) :: StreamEncoder.t()
   def encode_stream(enumerable, opts \\ []) do
     StreamEncoder.encode(enumerable, opts)
   end
@@ -370,6 +371,7 @@ defmodule Msgpack do
   [1, "elixir", true]
   ```
   """
+  @spec decode_stream(Enumerable.t(binary()), StreamDecoder.opts_t()) :: StreamDecoder.t()
   def decode_stream(enumerable, opts \\ []) do
     StreamDecoder.decode(enumerable, opts)
   end

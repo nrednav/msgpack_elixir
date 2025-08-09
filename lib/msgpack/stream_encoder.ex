@@ -12,6 +12,15 @@ defmodule Msgpack.StreamEncoder do
   not be encoded.
   """
 
+  @typedoc "A stream that yields encoded MessagePack objects."
+  @type t :: Stream.t(result_t())
+
+  @typedoc "An individual result from the encoding stream."
+  @type result_t :: {:ok, binary()} | {:error, any()}
+
+  @typedoc "Options passed to the encoder."
+  @type opts_t :: keyword()
+
   @doc """
   Lazily encodes an enumerable of Elixir terms into a stream of result tuples.
 
@@ -57,6 +66,7 @@ defmodule Msgpack.StreamEncoder do
   ]
   ```
   """
+  @spec encode(Enumerable.t(), opts_t()) :: t()
   def encode(enumerable, opts \\ []) do
     Stream.map(enumerable, &Msgpack.encode(&1, opts))
   end
