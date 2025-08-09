@@ -7,7 +7,7 @@ defmodule Msgpack.Decoder do
 
   @spec decode(binary(), keyword()) :: {:ok, term()} | {:error, term()}
   def decode(binary, opts \\ []) do
-    merged_opts = Keyword.merge(default_options(), opts)
+    merged_opts = Keyword.merge(default_opts(), opts)
 
     try do
       case Internal.decode(binary, merged_opts) do
@@ -29,7 +29,7 @@ defmodule Msgpack.Decoder do
   @doc """
   Returns a keyword list of the default options for the decoder.
   """
-  def default_options() do
+  def default_opts() do
     [
       max_depth: 100,
       max_byte_size: 10_000_000 # 10MB

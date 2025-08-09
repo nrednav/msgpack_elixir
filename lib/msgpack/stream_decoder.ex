@@ -6,41 +6,41 @@ defmodule Msgpack.StreamDecoder do
   Decodes a stream of MessagePack binaries into a stream of Elixir terms.
   """
   def decode(enumerable, opts \\ []) do
-    merged_opts = Keyword.merge(Decoder.default_options(), opts)
+    start_fun = fn ->
+      merged_opts = Keyword.merge(Decoder.default_opts(), opts)
+      {<<>>, merged_opts}
+    end
 
-    initial_acc = %{
-      enum: enumerable,
-      buffer: <<>>,
-      opts: merged_opts
-    }
+    stream_with_eof = Stream.concat(enumerable, [:eof])
+    transform_fun = &transform_chunk/2
 
-    Stream.unfold(initial_acc, &decode_one_or_fetch/1)
+    Stream.transform(stream_with_eof, start_fun.(), transform_fun)
   end
 
-  defp decode_one_or_fetch(state) do
-    try do
-      case Internal.decode(state.buffer, state.opts) do
-        {:ok, {term, rest}} ->
-          {term, %{state | buffer: rest}}
+  defp transform_chunk(:eof, {<<>>, _opts}) do
+    {[], {<<>>, nil}}
+  end
 
-        {:error, :unexpected_eof} ->
-          case Enum.fetch(state.enum, 0) do
-            {:ok, chunk} ->
-              new_buffer = state.buffer <> chunk
-              remaining_enum = Stream.drop(state.enum, 1)
-              decode_one_or_fetch(%{state | buffer: new_buffer, enum: remaining_enum})
+  defp transform_chunk(:eof, {buffer, _opts}) do
+    {[{:error, :unexpected_eof}], {buffer, nil}}
+  end
 
-            :error ->
-              if byte_size(state.buffer) > 0 do
-                {{:error, :unexpected_eof}, %{state | buffer: <<>>}}
-              else
-                nil
-              end
-          end
-      end
-    catch
-      {:error, reason} ->
-        {{:error, reason}, %{state | buffer: <<>>}}
+  defp transform_chunk(chunk, {buffer, opts}) do
+    {decoded_terms, leftover_buffer} = do_transform(buffer <> chunk, opts, [])
+    {decoded_terms, {leftover_buffer, opts}}
+  end
+
+  defp do_transform(<<>>, _opts, acc) do
+    {Enum.reverse(acc), <<>>}
+  end
+
+  defp do_transform(buffer, opts, acc) do
+    case Internal.decode(buffer, opts) do
+      {:ok, {term, rest}} ->
+        do_transform(rest, opts, [term | acc])
+
+      {:error, _reason} ->
+        {Enum.reverse(acc), buffer}
     end
   end
 end

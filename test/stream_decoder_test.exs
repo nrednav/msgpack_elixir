@@ -24,8 +24,8 @@ defmodule Msgpack.StreamDecoderTest do
   end
 
   test "returns an error when the stream ends with incomplete data" do
-    binary = Msgpack.encode!("returns an error when the stream ends with incomplete data")
-    incomplete_binary = :binary.part(binary, 0, 4)
+    binary = Msgpack.encode!("a guaranteed incomplete string")
+    incomplete_binary = :binary.part(binary, 0, byte_size(binary) - 1)
     input_stream = [incomplete_binary]
     expected_result = [{:error, :unexpected_eof}]
 
