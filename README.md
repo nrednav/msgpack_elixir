@@ -62,7 +62,7 @@ This section explains how to setup the project locally for development.
 
 ### Dependencies
 
-- Elixir `~> 1.7` (OTP 21+)
+- Elixir `~> 1.12` (OTP 24+)
 
 ### Get the Source
 
