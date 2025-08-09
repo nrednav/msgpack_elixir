@@ -233,7 +233,6 @@ defmodule Msgpack.Decoder do
       base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
 
       if nanoseconds > 0 do
-        # NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
         microseconds = div(nanoseconds, 1000)
         %{base_datetime | microsecond: {microseconds, 6}}
       else
@@ -252,7 +251,6 @@ defmodule Msgpack.Decoder do
       base_datetime = NaiveDateTime.from_erl!(erlang_datetime)
 
       if nanoseconds > 0 do
-        # NaiveDateTime.add(base_datetime, nanoseconds, :nanosecond)
         microseconds = div(nanoseconds, 1000)
         %{base_datetime | microsecond: {microseconds, 6}}
       else
