@@ -12,13 +12,19 @@ defmodule Msgpack.StreamEncoder do
   not be encoded.
   """
 
-  @typedoc "A stream that yields encoded MessagePack objects."
+  @typedoc """
+  A stream that yields result tuples from an encoding operation.
+
+  Each element is either `{:ok, binary}` or `{:error, reason}`.
+  """
   @type t :: Stream.t(result_t())
 
-  @typedoc "An individual result from the encoding stream."
+  @typedoc """
+  The result of attempting to encode a single term.
+  """
   @type result_t :: {:ok, binary()} | {:error, any()}
 
-  @typedoc "Options passed to the encoder."
+  @typedoc "Options passed to the encoder for each term."
   @type opts_t :: keyword()
 
   @doc """
@@ -66,7 +72,7 @@ defmodule Msgpack.StreamEncoder do
   ]
   ```
   """
-  @spec encode(Enumerable.t(), opts_t()) :: t()
+  @spec encode(Enumerable.t(any()), opts_t()) :: t()
   def encode(enumerable, opts \\ []) do
     Stream.map(enumerable, &Msgpack.encode(&1, opts))
   end

@@ -1,7 +1,7 @@
 defmodule MsgpackElixir.MixProject do
   use Mix.Project
 
-  @version "1.1.0"
+  @version "1.1.1"
   @source_url "https://github.com/nrednav/msgpack_elixir"
 
   def project do
@@ -60,6 +60,7 @@ defmodule MsgpackElixir.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
+        "LICENSE",
         "guides/telemetry.md"
       ]
     ]

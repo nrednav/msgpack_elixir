@@ -23,10 +23,17 @@ defmodule Msgpack.StreamDecoder do
   alias Msgpack.Decoder
   alias Msgpack.Decoder.Internal
 
-  @typedoc "A stream that yields decoded Elixir terms."
-  @type t :: Stream.t()
+  @typedoc """
+  A stream that yields decoded Elixir terms or a final error tuple.
 
-  @typedoc "Options passed to the decoder."
+  The stream will produce any t:term/0 that can be decoded from the input.
+
+  If the input enumerable finishes while a term is only partially decoded, the
+  last element in the stream will be {:error, :unexpected_eof}.
+  """
+  @type t :: Stream.t(term() | {:error, :unexpected_eof})
+
+  @typedoc "Options passed to the decoder for each object."
   @type opts_t :: keyword()
 
   @doc """
@@ -36,7 +43,7 @@ defmodule Msgpack.StreamDecoder do
   ## Parameters
 
     * `enumerable`: An `Enumerable` that yields chunks of a MessagePack binary
-    stream (e.g., `File.stream/3` or a list of binaries).
+    stream (e.g., `f:File.stream/3` or a list of binaries).
     * `opts`: A keyword list of options passed to the underlying decoder.
 
   ## Return Value
@@ -90,7 +97,11 @@ defmodule Msgpack.StreamDecoder do
   end
 
   @doc false
-  @spec transform_chunk(binary() | :eof, {binary(), opts_t()}) :: {list(), {binary(), opts_t() | nil}}
+  @spec transform_chunk(
+          binary() | :eof,
+          {binary(), opts_t()}
+        ) ::
+          {list(term() | {:error, :unexpected_eof}), {binary(), opts_t() | nil}}
   defp transform_chunk(:eof, {<<>>, _opts}) do
     {[], {<<>>, nil}}
   end
@@ -105,7 +116,7 @@ defmodule Msgpack.StreamDecoder do
   end
 
   @doc false
-  @spec do_transform(binary(), opts_t(), list()) :: {list(), binary()}
+  @spec do_transform(binary(), opts_t(), list(term())) :: {list(term()), binary()}
   defp do_transform(<<>>, _opts, acc) do
     {Enum.reverse(acc), <<>>}
   end
