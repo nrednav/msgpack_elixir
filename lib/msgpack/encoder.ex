@@ -4,8 +4,19 @@ defmodule Msgpack.Encoder do
   """
 
   @spec encode(term(), keyword()) :: {:ok, iodata()} | {:error, term()}
-  def encode(term, opts) do
-    do_encode(term, opts)
+  def encode(term, opts \\ []) do
+    merged_opts = Keyword.merge(default_opts(), opts)
+    do_encode(term, merged_opts)
+  end
+
+  @doc """
+  Returns a keyword list of the default options for the encoder.
+  """
+  def default_opts() do
+    [
+      atoms: :string,
+      string_validation: true
+    ]
   end
 
   # ==== Nil ====
