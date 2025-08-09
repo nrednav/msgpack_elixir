@@ -8,7 +8,7 @@ defmodule MsgpackElixir.MixProject do
     [
       app: :msgpack_elixir,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
