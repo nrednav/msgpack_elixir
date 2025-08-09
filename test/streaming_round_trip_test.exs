@@ -7,7 +7,7 @@ defmodule Msgpack.StreamingRoundTripTest do
   alias Msgpack.StreamDecoder
 
   property "a round trip through the streaming API is lossless" do
-    check all(terms <- list_of_encodable_terms(), chunk_size <- StreamData.integer(1..20)) do
+    check all(terms <- encodable_terms(), chunk_size <- StreamData.integer(1..20)) do
       binaries =
         StreamEncoder.encode(terms)
         |> Stream.map(fn {:ok, binary} -> binary end)
@@ -26,7 +26,7 @@ defmodule Msgpack.StreamingRoundTripTest do
     end
   end
 
-  defp list_of_encodable_terms do
+  defp encodable_terms() do
     StreamData.list_of(encodable_term())
   end
 
