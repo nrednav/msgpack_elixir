@@ -87,6 +87,12 @@ defmodule Msgpack do
       payload with non-UTF-8 strings, which may be incompatible with other
       MessagePack decoders.
 
+    * `:deterministic` - Controls whether map keys are sorted before encoding.
+      * `true` (default) - Enables key sorting, which ensures that encoding the
+      same map always produces the same binary.
+      * `false` - Disables key sorting, which can provide a performance gain in
+      cases where determinism is not required.
+
   ## Examples
 
   ### Standard Encoding
