@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.0.0] - 2025-08-10
+
+### Changed
+
+- **BREAKING:** Map encoding is now deterministic by default
+  - `Msgpack.encode/2` sorts map keys according to Elixir's standard term
+    ordering before serialization
+  - This guarantees that identical maps produce identical binary output, but it
+    alters the output compared to previous versions of this library
+
+### Added
+
+- Added a `:deterministic` option to `Msgpack.encode/2`
+  - You can set this to `false` to disable key sorting for higher performance in
+    contexts where deterministic output is not required.
+
 ## [v1.1.1] - 2025-08-09
 
 ### Fixed
