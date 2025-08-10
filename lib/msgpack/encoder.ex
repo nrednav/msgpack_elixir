@@ -15,7 +15,8 @@ defmodule Msgpack.Encoder do
   def default_opts() do
     [
       atoms: :string,
-      string_validation: true
+      string_validation: true,
+      deterministic: true
     ]
   end
 
@@ -160,6 +161,15 @@ defmodule Msgpack.Encoder do
 
   # ==== Maps ====
   defp do_encode(map, opts) when is_map(map) do
+    enumerable =
+      if Keyword.get(opts, :deterministic, true) == false do
+        map
+      else
+        map
+        |> Map.to_list()
+        |> Enum.sort_by(fn {key, _value} -> key end)
+      end
+
     acc = {:ok, []}
 
     reducer = fn {key, value}, {:ok, acc_list} ->
@@ -172,7 +182,7 @@ defmodule Msgpack.Encoder do
       end
     end
 
-    case Enum.reduce(map, acc, reducer) do
+    case Enum.reduce(enumerable, acc, reducer) do
       {:ok, encoded_pairs} ->
         size = map_size(map)
         {:ok, [encode_map_header(size), Enum.reverse(encoded_pairs)]}

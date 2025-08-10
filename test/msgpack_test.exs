@@ -76,6 +76,44 @@ defmodule MsgpackTest do
       string_32 = String.duplicate("a", 32)
       assert_encode(string_32, <<0xD9, 32, string_32::binary>>)
     end
+
+    test "produces identical output for maps with different key orders, by default" do
+      map1 = %{c: 3, b: 2, a: 1}
+      map2 = %{a: 1, c: 3, b: 2}
+
+      expected_binary = <<0x83, 0xA1, "a", 1, 0xA1, "b", 2, 0xA1, "c", 3>>
+
+      assert_encode(map1, expected_binary)
+      assert_encode(map2, expected_binary)
+    end
+
+    test "correctly sorts maps with mixed key types, by default" do
+      map = %{"a" => 1, 100 => 2, :z => 3, nil => 4}
+      expected_binary = <<0x84, 100, 2, 0xC0, 4, 0xA1, "z", 3, 0xA1, "a", 1>>
+
+      assert_encode(map, expected_binary)
+    end
+
+    test "applies sorting to nested maps, by default" do
+      map1 = %{b: %{y: 2, x: 1}, a: 10}
+      map2 = %{a: 10, b: %{x: 1, y: 2}}
+
+      {:ok, expected_binary} = Msgpack.encode(map2)
+
+      assert_encode(map1, expected_binary)
+    end
+
+    test "with `deterministic: false` opts out of sorted key encoding" do
+      map = %{c: 1, a: 2}
+
+      {:ok, sorted_binary} = Msgpack.encode(map)
+
+      assert sorted_binary == <<0x82, 0xA1, "a", 2, 0xA1, "c", 1>>
+
+      {:ok, unsorted_binary} = Msgpack.encode(map, deterministic: false)
+
+      refute unsorted_binary == sorted_binary
+    end
   end
 
   describe "decode/2" do
@@ -357,8 +395,8 @@ defmodule MsgpackTest do
 
   # ==== Helpers ====
 
-  defp assert_encode(input, expected_binary) do
-    assert Msgpack.encode(input) == {:ok, expected_binary}
+  defp assert_encode(input, expected_binary, opts \\ []) do
+    assert Msgpack.encode(input, opts) == {:ok, expected_binary}
   end
 
   defp assert_encode_error(input, expected_reason, opts \\ []) do
