@@ -74,6 +74,36 @@ iex> encoded_stream |> Stream.take(3) |> Enum.to_list()
 ]
 ```
 
+### Map Encoding
+
+By default, `Msgpack.encode/2` serializes Elixir maps in a **deterministic**
+manner.
+
+It achieves this by sorting the map keys according to Elixir's standard term
+ordering before encoding. This ensures that encoding the same map will always
+produce the exact same binary output, which is critical for tasks like
+generating signatures or comparing hashes.
+
+```elixir
+iex> map1 = %{a: 1, b: 2}
+iex> map2 = %{b: 2, a: 1}
+
+# Both produce the same output because their keys are sorted [:a, :b]
+iex> Msgpack.encode!(map1) == Msgpack.encode!(map2)
+true
+```
+
+#### Performance Opt-Out
+
+Sorting keys has a performance cost (O(N log N)).
+
+If you are working in a performance-critical context where byte-for-byte
+determinism is not required, you can disable it:
+
+```elixir
+Msgpack.encode(map, deterministic: false)
+```
+
 ## Full Documentation
 
 For detailed information on all features, options, and functions, see the [full
