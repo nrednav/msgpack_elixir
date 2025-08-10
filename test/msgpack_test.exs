@@ -104,15 +104,26 @@ defmodule MsgpackTest do
     end
 
     test "with `deterministic: false` opts out of sorted key encoding" do
-      map = %{c: 1, a: 2}
+      # Per the Erlang docs:
+      # https://www.erlang.org/doc/system/maps.html#how-large-maps-are-implemented,
+      # maps with 32 or fewer elements are internally stored with sorted keys.
+      # To reliably test the non-deterministic path, a large map (33+ elements)
+      # must be used, which uses a HAMT implementation and does not iterate in
+      # key-sorted order.
+      large_map =
+        Enum.into(1..33, %{}, fn i ->
+          key = String.to_atom(<<123 - i>> <> "_#{i}")
+          {key, i}
+        end)
 
-      {:ok, sorted_binary} = Msgpack.encode(map)
+      assert map_size(large_map) == 33
 
-      assert sorted_binary == <<0x82, 0xA1, "a", 2, 0xA1, "c", 1>>
+      {:ok, sorted_binary} = Msgpack.encode(large_map)
+      {:ok, unsorted_binary} = Msgpack.encode(large_map, deterministic: false)
 
-      {:ok, unsorted_binary} = Msgpack.encode(map, deterministic: false)
-
-      refute unsorted_binary == sorted_binary
+      refute unsorted_binary == sorted_binary,
+        "Expected binaries to be different, but both were identical. The
+        non-deterministic path may be producing sorted output."
     end
   end
 
