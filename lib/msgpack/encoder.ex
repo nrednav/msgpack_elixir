@@ -3,6 +3,8 @@ defmodule Msgpack.Encoder do
   Handles the logic of encoding Elixir terms into iodata.
   """
 
+  alias Msgpack.Encodable
+
   @spec encode(term(), keyword()) :: {:ok, iodata()} | {:error, term()}
   def encode(term, opts \\ []) do
     merged_opts = Keyword.merge(default_opts(), opts)
@@ -93,6 +95,20 @@ defmodule Msgpack.Encoder do
       end
 
     {:ok, encoded_binary}
+  end
+
+  # ==== Structs (Custom) ====
+  defp do_encode(%_{} = struct, opts) when Keyword.get(opts, :protocol_dispatch_enabled, true) do
+    case Encodable.encode(struct) do
+      {:ok, term} ->
+        do_encode(term, Keyword.put(opts, :protocol_dispatch_enabled, false))
+
+      {:error, reason} ->
+        {:error, reason}
+    rescue
+      e in [Protocol.UndefinedError] ->
+        {:error, {:unsupported_type, e.struct}}
+    end
   end
 
   # ==== Structs (DateTime, NaiveDateTime and Ext) ====
