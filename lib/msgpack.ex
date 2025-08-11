@@ -29,6 +29,8 @@ defmodule Msgpack do
   to limit resource allocation when decoding.
   - **Telemetry Integration:** Emits `:telemetry` events for monitoring and
   observability.
+  - **Extensible Structs:** Allows any custom Elixir struct to be encoded by
+  implementing the `Msgpack.Encodable` protocol.
 
   ## Options
 
@@ -92,6 +94,33 @@ defmodule Msgpack do
       same map always produces the same binary.
       * `false` - Disables key sorting, which can provide a performance gain in
       cases where determinism is not required.
+
+  ## Custom Struct Support
+
+  This function can encode any custom Elixir struct that implements the
+  `Msgpack.Encodable` protocol. This allows you to define custom serialization
+  logic for your application structs.
+
+  For example, given a `Product` struct:
+
+  ```elixir
+  # 1. Define your struct
+  defmodule Product do
+    defstruct [:id, :name]
+  end
+
+  # 2. Implement the protocol
+  defimpl Msgpack.Encodable, for: Product do
+    def encode(%Product{id: id, name: name}) do
+      # Transform the struct into an encodable term (e.g., a map)
+      {:ok, %{"id" => id, "name" => name}}
+    end
+  end
+
+  iex> product = %Product{id: 1, name: "Elixir"}
+  iex> {:ok, binary} = Msgpack.encode(product)
+  <<130, 162, 105, 100, 1, 164, 110, 97, 109, 101, 166, 69, 108, 105, 120, 105, 114>>
+  ```
 
   ## Examples
 
