@@ -18,11 +18,11 @@ defprotocol Msgpack.Encodable do
   - Booleans
   - `nil`
 
-  Importantly, the returned term **must not** contain other custom structs that
-  themselves require an `Encodable` implementation. The purpose of this protocol
-  is to perform a single-level transformation from a custom struct into a
-  directly encodable term. Returning a nested custom struct will result in an
-  `{:error, {:unsupported_type, term}}` during encoding.
+  It is important that the returned term **must not** contain other custom
+  structs that themselves require an `Encodable` implementation. The purpose of
+  this protocol is to perform a single-level transformation from a custom struct
+  into a directly encodable term. Returning a nested custom struct will result
+  in an `{:error, {:unsupported_type, term}}` during encoding.
 
   ## Example
 
