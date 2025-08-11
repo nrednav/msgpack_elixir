@@ -12,8 +12,10 @@ types.
 ## Features
 
 - **Specification Compliance:** Implements the complete MessagePack type system.
-- **Elixir Struct Support:** Encodes and decodes `DateTime` and `NaiveDateTime`
-  structs via the Timestamp extension type.
+- **Extensible Struct Support:**
+  - Natively encodes and decodes `DateTime` and `NaiveDateTime` structs via the
+    Timestamp extension type.
+  - Allows any custom struct to be encoded via the `Msgpack.Encodable` protocol.
 - **Configurable Validation:** Provides an option to bypass UTF-8 validation on
   strings for performance-critical paths.
 - **Resource Limiting:** Includes configurable `:max_depth` and `:max_byte_size`
@@ -30,7 +32,7 @@ Add `msgpack_elixir` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:msgpack_elixir, "~> 1.0.0"}]
+  [{:msgpack_elixir, "~> 2.0.0"}]
 end
 ```
 
@@ -102,6 +104,38 @@ determinism is not required, you can disable it:
 
 ```elixir
 Msgpack.encode(map, deterministic: false)
+```
+
+### Custom Struct Serialization
+
+You can add custom encoding logic for your own Elixir structs by implementing
+the `Msgpack.Encodable` protocol. This allows `Msgpack.encode/2` to accept your
+structs directly, centralizing conversion logic within the protocol
+implementation.
+
+
+```elixir
+# 1. Define your application's struct
+defmodule Product do
+  defstruct [:id, :name]
+end
+
+# 2. Implement the `Msgpack.Encodable` protocol for that struct
+defimpl Msgpack.Encodable, for: Product do
+
+  # 3. Inside the protocol's `encode/1` function, transform your struct into a basic
+  # Elixir term that MessagePack can encode (e.g., a map or a list).
+  def encode(%Product{id: id, name: name}) do
+    {:ok, %{"id" => id, "name" => name}}
+  end
+end
+
+iex> product = %Product{id: 1, name: "Elixir"}
+iex> {:ok, binary} = Msgpack.encode(product)
+<<130, 162, 105, 100, 1, 164, 110, 97, 109, 101, 166, 69, 108, 105, 120, 105, 114>>
+
+iex> Msgpack.decode(binary)
+{:ok, %{"id" => 1, "name" => "Elixir"}}
 ```
 
 ## Full Documentation

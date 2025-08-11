@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `:deterministic` option to `Msgpack.encode/2`
   - You can set this to `false` to disable key sorting for higher performance in
     contexts where deterministic output is not required.
+- Added the `Msgpack.Encodable` protocol to allow for custom serialization logic
+  for any Elixir struct
+  - This allows users to encode their own data types, such as %Product{} or
+    %User{}, directly
 
 ## [v1.1.1] - 2025-08-09
 
