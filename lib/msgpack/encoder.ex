@@ -97,20 +97,6 @@ defmodule Msgpack.Encoder do
     {:ok, encoded_binary}
   end
 
-  # ==== Structs (Custom) ====
-  defp do_encode(%_{} = struct, opts) when Keyword.get(opts, :protocol_dispatch_enabled, true) do
-    case Encodable.encode(struct) do
-      {:ok, term} ->
-        do_encode(term, Keyword.put(opts, :protocol_dispatch_enabled, false))
-
-      {:error, reason} ->
-        {:error, reason}
-    rescue
-      e in [Protocol.UndefinedError] ->
-        {:error, {:unsupported_type, e.struct}}
-    end
-  end
-
   # ==== Structs (DateTime, NaiveDateTime and Ext) ====
   defp do_encode(%DateTime{} = datetime, opts) do
     case DateTime.shift_zone(datetime, "Etc/UTC") do
@@ -144,6 +130,20 @@ defmodule Msgpack.Encoder do
       end
 
     {:ok, [header, data]}
+  end
+
+  # ==== Structs (Custom via Protocol) ====
+  defp do_encode(%_{} = struct, opts) do
+    with true <- Keyword.get(opts, :protocol_dispatch_enabled, true),
+         {:ok, term} <- try_protocol_encode(struct) do
+      do_encode(term, Keyword.put(opts, :protocol_dispatch_enabled, false))
+    else
+      false ->
+        {:error, {:unsupported_type, struct.__struct__}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   # ==== Lists ====
@@ -249,5 +249,12 @@ defmodule Msgpack.Encoder do
       true ->
         [<<0xC7, 12, -1::signed-8>>, <<nanoseconds::32, seconds::signed-64>>]
     end
+  end
+
+  defp try_protocol_encode(struct) do
+    Encodable.encode(struct)
+  rescue
+    e in [Protocol.UndefinedError] ->
+      {:error, {:unsupported_type, e.value.__struct__}}
   end
 end
