@@ -3,6 +3,8 @@ defmodule Msgpack.Encoder do
   Handles the logic of encoding Elixir terms into iodata.
   """
 
+  alias Msgpack.Encodable
+
   @spec encode(term(), keyword()) :: {:ok, iodata()} | {:error, term()}
   def encode(term, opts \\ []) do
     merged_opts = Keyword.merge(default_opts(), opts)
@@ -15,7 +17,8 @@ defmodule Msgpack.Encoder do
   def default_opts() do
     [
       atoms: :string,
-      string_validation: true
+      string_validation: true,
+      deterministic: true
     ]
   end
 
@@ -129,6 +132,20 @@ defmodule Msgpack.Encoder do
     {:ok, [header, data]}
   end
 
+  # ==== Structs (Custom via Protocol) ====
+  defp do_encode(%_{} = struct, opts) do
+    with true <- Keyword.get(opts, :protocol_dispatch_enabled, true),
+         {:ok, term} <- try_protocol_encode(struct) do
+      do_encode(term, Keyword.put(opts, :protocol_dispatch_enabled, false))
+    else
+      false ->
+        {:error, {:unsupported_type, struct.__struct__}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   # ==== Lists ====
   defp do_encode(list, opts) when is_list(list) do
     acc = {:ok, []}
@@ -160,6 +177,15 @@ defmodule Msgpack.Encoder do
 
   # ==== Maps ====
   defp do_encode(map, opts) when is_map(map) do
+    enumerable =
+      if Keyword.get(opts, :deterministic, true) == false do
+        map
+      else
+        map
+        |> Map.to_list()
+        |> Enum.sort_by(fn {key, _value} -> key end)
+      end
+
     acc = {:ok, []}
 
     reducer = fn {key, value}, {:ok, acc_list} ->
@@ -172,7 +198,7 @@ defmodule Msgpack.Encoder do
       end
     end
 
-    case Enum.reduce(map, acc, reducer) do
+    case Enum.reduce(enumerable, acc, reducer) do
       {:ok, encoded_pairs} ->
         size = map_size(map)
         {:ok, [encode_map_header(size), Enum.reverse(encoded_pairs)]}
@@ -223,5 +249,12 @@ defmodule Msgpack.Encoder do
       true ->
         [<<0xC7, 12, -1::signed-8>>, <<nanoseconds::32, seconds::signed-64>>]
     end
+  end
+
+  defp try_protocol_encode(struct) do
+    Encodable.encode(struct)
+  rescue
+    e in [Protocol.UndefinedError] ->
+      {:error, {:unsupported_type, e.value.__struct__}}
   end
 end
